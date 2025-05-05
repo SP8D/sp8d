@@ -1,0 +1,19 @@
+{
+  "name": "@sp8d/core",
+  "version": "0.2.1",
+  "description": "Ultra-low-latency bounded channel for web-based AI copilots.",
+  "main": "dist/sp8d-core.js",
+  "types": "dist/sp8d-core.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build && npx esbuild src/sp8d-core.ts --bundle --format=esm --outdir=dist --sourcemap",
+    "test": "echo 'Please run tests from the monorepo root using: npm run test:core' && exit 1"
+  },
+  "files": [
+    "dist"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}

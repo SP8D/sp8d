@@ -1,0 +1,21 @@
+.npmrc
+/node_modules
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Ignore build and test output
+/dist/
+packages/*/dist/
+packages/*/test-results/
+test-results/
+playwright-report/
+*.tsbuildinfo
+
+# Ignore Netlify publish output
+data/netlify_publish/
+netlify_publish/

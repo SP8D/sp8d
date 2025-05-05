@@ -1,0 +1,21 @@
+{
+  "name": "@sp8d/diagnostics",
+  "version": "0.1.0",
+  "description": "Diagnostics utilities for SP8D channels.",
+  "main": "dist/sp8d-diagnostics.js",
+  "types": "dist/sp8d-diagnostics.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build && npx esbuild src/sp8d-diagnostics.ts --bundle --format=esm --outdir=dist --sourcemap",
+    "test": "echo \"No tests for diagnostics package\""
+  },
+  "files": [
+    "dist"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@sp8d/core": "0.2.1"
+  },
+  "devDependencies": {}
+}
