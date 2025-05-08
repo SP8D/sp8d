@@ -20,37 +20,66 @@ export interface ChannelDiagnostics {
   onUpdate(cb: (stats: ChannelDiagnostics["stats"]) => void): void;
 }
 
+export interface ChannelDiagnosticsOptions {
+  intervalMs?: number;
+  slotSample?: number | "all";
+  onUpdate?: (stats: ChannelDiagnostics["stats"]) => void;
+}
+
+/**
+ * Create diagnostics for a channel, with flexible options and developer-friendly API.
+ * @param channel The channel to monitor
+ * @param options Diagnostics options (intervalMs, slotSample, onUpdate)
+ */
 export function createChannelDiagnostics(
   channel: Channel,
-  intervalMs: number = 50
+  options: ChannelDiagnosticsOptions = {}
 ): ChannelDiagnostics {
+  const intervalMs = options.intervalMs ?? 50;
+  const slotSample = options.slotSample ?? "all";
   let lastMsgCount = 0;
   let lastTime = Date.now();
   let throughput = 0;
   let consumerLag = 0;
   let avgSlotAge = 0;
   let maxSlotAge = 0;
-  let updateCb: ((s: ChannelDiagnostics["stats"]) => void) | undefined;
+  let updateCb: ((s: ChannelDiagnostics["stats"]) => void) | undefined =
+    options.onUpdate;
   let timer: ReturnType<typeof setInterval>;
   const statsHistory: ChannelStats[] = [];
 
   function getSlotState(): SlotState[] {
-    // Use type assertion for test/dev builds only
     const testChannel = channel as any;
     if (!testChannel.slotStatus || !testChannel.slotClaimTimestamp)
       throw new Error("Channel internals not exposed");
     const statusArr = testChannel.slotStatus[0];
     const claimTS = testChannel.slotClaimTimestamp[0];
     const result: SlotState[] = [];
-    for (let i = 0; i < statusArr.length; i++) {
-      result.push({
-        index: i,
-        status: statusArr[i],
-        ageMs:
-          statusArr[i] === 1 || statusArr[i] === 2
-            ? Date.now() - claimTS[i]
-            : 0,
-      });
+    const N = statusArr.length;
+    if (slotSample === "all" || slotSample >= N) {
+      for (let i = 0; i < N; i++) {
+        result.push({
+          index: i,
+          status: statusArr[i],
+          ageMs:
+            statusArr[i] === 1 || statusArr[i] === 2
+              ? Date.now() - claimTS[i]
+              : 0,
+        });
+      }
+    } else {
+      // Sample random slots for large channels
+      for (let s = 0; s < slotSample; s++) {
+        const i = Math.floor(Math.random() * N);
+        result.push({
+          index: i,
+          status: statusArr[i],
+          ageMs:
+            statusArr[i] === 1 || statusArr[i] === 2
+              ? Date.now() - claimTS[i]
+              : 0,
+        });
+      }
     }
     return result;
   }
@@ -58,58 +87,45 @@ export function createChannelDiagnostics(
   function updateStats() {
     const stats = channel.stats();
     const currentTime = Date.now();
-    // Throughput: messages/sec (used slot diff per time)
     throughput =
       ((stats.used - lastMsgCount) * 1000) / (currentTime - lastTime);
     lastMsgCount = stats.used;
     lastTime = currentTime;
-
-    // Compute slot ages
     const slotState = getSlotState();
     const ages = slotState
       .filter((s) => s.status !== 0)
       .map((s) => s.ageMs)
       .sort((a, b) => a - b);
-
     avgSlotAge =
       ages.length > 0 ? ages.reduce((a, b) => a + b) / ages.length : 0;
     maxSlotAge = ages.length > 0 ? ages[ages.length - 1] : 0;
     consumerLag = maxSlotAge;
-
-    // Compose enhanced stats object for easy visualization/trending
     const enhancedStats = {
       ...stats,
       throughput: Math.max(0, throughput),
       consumerLag,
       avgSlotAge,
       maxSlotAge,
+      slotState, // <-- include slotState for dashboard
     };
-
     statsHistory.push(stats);
     if (updateCb) updateCb(enhancedStats);
-    // Optionally, return for UI polling
     return enhancedStats;
   }
 
   function start() {
     timer = setInterval(updateStats, intervalMs);
   }
-
   function stop() {
     clearInterval(timer!);
   }
-
   function onUpdate(cb: (s: ChannelDiagnostics["stats"]) => void) {
     updateCb = cb;
   }
-
   function getHistory(): ChannelStats[] {
     return statsHistory.slice();
   }
-
-  // Initial call to populate baseline
   updateStats();
-
   return {
     get stats() {
       return updateStats();
@@ -122,28 +138,40 @@ export function createChannelDiagnostics(
   };
 }
 
-// import { createChannel, attachChannel } from "./sp8d-core";
-// import { createChannelDiagnostics } from "./sp8d-diagnostics";
+/**
+ * Start diagnostics in a worker thread for zero main-thread impact.
+ * @param channel The channel to monitor
+ * @param options Diagnostics options (intervalMs, slotSample, onUpdate)
+ * @returns The Worker instance
+ */
+export function startDiagnosticsWorker(
+  channel: Channel,
+  options: ChannelDiagnosticsOptions = {}
+): Worker {
+  // Create a diagnostics channel for stats transfer
+  // (User must provide a worker script that imports this logic)
+  const worker = new Worker(
+    new URL("./sp8d-diagnostics-worker.js", import.meta.url),
+    { type: "module" }
+  );
+  // Pass channel buffer and options to worker
+  const testChannel = channel as any;
+  worker.postMessage({
+    buffer: testChannel.sab || testChannel.buffer,
+    options,
+  });
+  return worker;
+}
 
-// const { channel, buffer } = createChannel({ slots: 32, slotSize: 64 });
-
-// // Diagnostics extension (MUST be public in core!)
-// const diagnostics = createChannelDiagnostics(channel, 50);
-
-// diagnostics.onUpdate((stats) => {
-//   // This should print the stats each time they update
-//   // If running in browser, consider appendChild or textContent on DOM node
-//   console.log("update:", stats);
-//   // For live UI: document.getElementById("stats").textContent = JSON.stringify(stats)
-// });
-// diagnostics.start();
-
-// // Keep the interval running for logging/developer use
-// setInterval(() => {
-//   // Dump stats to console
-//   console.log("interval stats", diagnostics.stats);
-
-//   // Optional: show live slot states (for visual UI)
-//   const slotState = diagnostics.getSlotState();
-//   console.table(slotState);
-// }, 500);
+// --- Worker Script Template (sp8d-diagnostics-worker.js) ---
+// import { attachChannel } from "@sp8d/core";
+// self.onmessage = (e) => {
+//   const { buffer, options } = e.data;
+//   const channel = attachChannel(buffer);
+//   const diagnostics = createChannelDiagnostics(channel, options);
+//   diagnostics.onUpdate((stats) => {
+//     self.postMessage(stats);
+//   });
+//   diagnostics.start();
+// };
+// ---------------------------------------------------------

@@ -356,6 +356,40 @@
       </div>
     </header>
     <main>
+      <section
+        id="diagnostics-dashboard"
+        style="
+          margin-bottom: 2.5rem;
+          min-height: 60px;
+          background: #f3f6fa;
+          border: 1px solid #e2e6ee;
+          border-radius: 8px;
+          padding: 1rem 0 0.5rem 0;
+        "
+      >
+        <div
+          id="diag-global"
+          style="
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 0.7rem;
+            min-height: 28px;
+          "
+        >
+          Loading diagnostics…
+        </div>
+        <div
+          id="diag-slotgrid"
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(18px, 1fr));
+            gap: 2px;
+            max-width: 700px;
+          "
+        ></div>
+      </section>
       <section class="tests">
         <div class="testcase" id="case1">
           <div class="testcase-header">
@@ -485,11 +519,12 @@
           size = 80;
         let processed = 0,
           sent = 0;
-        const { channel } = createChannel({
+        const { channel, buffer } = createChannel({
           slots,
           slotSize: size,
           sweepTimeoutMs: 40,
         });
+        // No live diagnostics during the test
         const start = Date.now();
         // Producer
         const prod = setInterval(() => {
@@ -507,6 +542,7 @@
           await new Promise((r) => setTimeout(r, 10));
         clearInterval(prod);
         clearInterval(cons);
+        const duration = Date.now() - start;
         document.getElementById("stress_result").innerHTML =
           (processed === N
             ? '<span class="success">PASS — '
@@ -514,9 +550,24 @@
           `Processed ${processed}/${N} (${((processed / N) * 100).toFixed(
             1
           )}%)</span>`;
-        document.getElementById("stress_output").textContent = `Duration: ${
-          Date.now() - start
-        } ms\nLost: ${N - processed}`;
+        document.getElementById(
+          "stress_output"
+        ).textContent = `Duration: ${duration} ms\nLost: ${N - processed}`;
+        // Take a single diagnostics sample at the end
+        const stats = channel.stats();
+        const avgThroughput = duration > 0 ? processed / (duration / 1000) : 0;
+        diagSummary = {
+          peakThroughput: avgThroughput,
+          avgThroughput,
+          maxLag: 0,
+          totalConflicts: stats.conflicts,
+          totalErrors: stats.errors,
+          totalReclaimed: stats.reclaimed,
+          finalSlotState: [],
+          slots,
+        };
+        diagTestActive = false;
+        updateDiagnosticsDashboard();
         btn.disabled = false;
       };
 
@@ -524,12 +575,12 @@
         btn.disabled = true;
         const slots = 12,
           size = 80;
-        const { channel } = createChannel({
+        const { channel, buffer } = createChannel({
           slots,
           slotSize: size,
           sweepTimeoutMs: 10,
         });
-        // Patch internals for test access only
+        startDiagnostics({ buffer }, slots);
         Object.defineProperty(channel, "slotStatus", {
           value: channel["slotStatus"],
           writable: false,
@@ -542,7 +593,6 @@
           configurable: true,
           enumerable: false,
         });
-        // Manually abandon half the slots
         for (let i = 0; i < slots / 2; i++) {
           channel.slotStatus[0][i] = 1;
           channel.slotClaimTimestamp[0][i] = Date.now() - 1000;
@@ -558,6 +608,19 @@
         document.getElementById("reclaim_output").textContent = `Reclaimed: ${
           stats.reclaimed - preReclaimed
         }, Errors: ${stats.errors}\nFree slots after: ${stats.free}`;
+        // Use final stats for dashboard summary
+        diagSummary = {
+          peakThroughput: 0,
+          avgThroughput: 0,
+          maxLag: 0,
+          totalConflicts: stats.conflicts,
+          totalErrors: stats.errors,
+          totalReclaimed: stats.reclaimed,
+          finalSlotState: [],
+          slots,
+        };
+        diagTestActive = false;
+        updateDiagnosticsDashboard();
         btn.disabled = false;
       };
 
@@ -570,15 +633,17 @@
           N = 2000;
         let written = 0,
           read = 0;
-        const { channel } = createChannel({
+        const { channel, buffer } = createChannel({
           slots,
           slotSize: size,
           sweepTimeoutMs: 30,
         });
+        startDiagnostics({ buffer }, slots);
         channel.__getTestStats = () => ({
           errors: channel.errors,
           conflicts: channel.conflicts,
         });
+        const start = Date.now(); // Record actual start time
         const prodInt = Array.from({ length: producers }, (_, p) =>
           setInterval(() => {
             for (let c = 0; c < 100 && written < N; c++)
@@ -591,9 +656,8 @@
             while ((msg = channel.recv())) read++;
           }, 1)
         );
-        const timeout = 3000,
-          t0 = Date.now();
-        while (read < N && Date.now() - t0 < timeout)
+        const timeout = 3000;
+        while (read < N && Date.now() - start < timeout)
           await new Promise((r) => setTimeout(r, 10));
         prodInt.forEach(clearInterval);
         consInt.forEach(clearInterval);
@@ -606,6 +670,21 @@
         document.getElementById(
           "race_output"
         ).textContent = `Produced: ${written}, Consumed: ${read}, Conflicts: ${conflicts}, Errors: ${errors}`;
+        const duration = Date.now() - start; // Use actual measured duration
+        const stats = channel.stats();
+        const avgThroughput = duration > 0 ? written / (duration / 1000) : 0;
+        diagSummary = {
+          peakThroughput: avgThroughput,
+          avgThroughput,
+          maxLag: 0,
+          totalConflicts: stats.conflicts,
+          totalErrors: stats.errors,
+          totalReclaimed: stats.reclaimed,
+          finalSlotState: [],
+          slots,
+        };
+        diagTestActive = false;
+        updateDiagnosticsDashboard();
         btn.disabled = false;
       };
 
@@ -616,17 +695,19 @@
           N = 30;
         const sent = [],
           got = [];
-        const { channel } = createChannel({
+        const { channel, buffer } = createChannel({
           slots,
           slotSize: size,
           sweepTimeoutMs: 50,
         });
+        startDiagnostics({ buffer }, slots);
         for (let i = 0; i < N; i++) {
           const obj = { msg: i, rnd: Math.random() };
           sent.push(obj);
           channel.send(encode(obj, size));
         }
         let broken = null;
+        const start = Date.now();
         for (let tr = 0; tr < 200 && got.length < N && !broken; tr++) {
           let out;
           while ((out = channel.recv())) {
@@ -651,6 +732,428 @@
                 sent[broken.msg] && sent[broken.msg].rnd
               }`
             : "");
+        // Use final stats for dashboard summary
+        const duration = Date.now() - start;
+        const stats = channel.stats();
+        const avgThroughput = duration > 0 ? got.length / (duration / 1000) : 0;
+        diagSummary = {
+          peakThroughput: avgThroughput,
+          avgThroughput,
+          maxLag: 0,
+          totalConflicts: stats.conflicts,
+          totalErrors: stats.errors,
+          totalReclaimed: stats.reclaimed,
+          finalSlotState: [],
+          slots,
+        };
+        diagTestActive = false;
+        updateDiagnosticsDashboard();
+        btn.disabled = false;
+      };
+
+      // --- DIAGNOSTICS DASHBOARD INTEGRATION ---
+      let diagWorker = null;
+      let diagStats = {};
+      let diagHistory = [];
+      let diagSummary = null;
+      let diagTestActive = false;
+      let diagLastUpdate = 0;
+      function startDiagnostics(channel, slots, opts = {}) {
+        if (diagWorker) diagWorker.terminate();
+        diagWorker = new Worker("./sp8d-diagnostics-worker.js", {
+          type: "module",
+        });
+        diagHistory = [];
+        diagSummary = null;
+        diagTestActive = true;
+        diagLastUpdate = 0;
+        // For stress tests, use slower interval and skip slotState
+        const intervalMs = opts.intervalMs ?? 200;
+        const slotSample = opts.slotSample ?? 0; // 0 disables slotState
+        diagWorker.postMessage({
+          buffer: channel.buffer || channel.sab,
+          options: { intervalMs, slotSample },
+        });
+        diagWorker.onmessage = (e) => {
+          // Throttle UI updates to every 200ms
+          const now = Date.now();
+          if (now - diagLastUpdate < 200 && diagTestActive) return;
+          diagLastUpdate = now;
+          diagStats = e.data;
+          if (diagTestActive)
+            diagHistory.push({
+              throughput: diagStats.throughput,
+              consumerLag: diagStats.consumerLag,
+              conflicts: diagStats.conflicts,
+              errors: diagStats.errors,
+              reclaimed: diagStats.reclaimed,
+            });
+          updateDiagnosticsDashboard();
+        };
+      }
+      function endDiagnosticsSummary(testMeta = {}) {
+        diagTestActive = false;
+        if (!diagHistory.length) return;
+        // Compute summary using actual test duration and processed count
+        const { processed = 0, durationMs = 0 } = testMeta;
+        let peakThroughput = 0,
+          sumThroughput = 0,
+          maxLag = 0,
+          total = diagHistory.length;
+        let totalConflicts = 0,
+          totalErrors = 0,
+          totalReclaimed = 0;
+        for (const s of diagHistory) {
+          peakThroughput = Math.max(peakThroughput, s.throughput || 0);
+          sumThroughput += s.throughput || 0;
+          maxLag = Math.max(maxLag, s.consumerLag || 0);
+          totalConflicts += s.conflicts || 0;
+          totalErrors += s.errors || 0;
+          totalReclaimed += s.reclaimed || 0;
+        }
+        // Use actual test throughput
+        const avgThroughput =
+          durationMs > 0 ? processed / (durationMs / 1000) : 0;
+        // Use final lag from last sample
+        const last = diagHistory[diagHistory.length - 1] || {};
+        diagSummary = {
+          peakThroughput,
+          avgThroughput,
+          maxLag: last.consumerLag || 0,
+          totalConflicts,
+          totalErrors,
+          totalReclaimed,
+          finalSlotState: [], // not sampled for stress
+          slots: testMeta.slots || 0,
+        };
+        updateDiagnosticsDashboard();
+      }
+      function updateDiagnosticsDashboard() {
+        const stats = diagTestActive ? diagStats : diagSummary || {};
+        const global = document.getElementById("diag-global");
+        if (!stats || (!stats.slots && !stats.peakThroughput)) {
+          global.innerHTML =
+            '<span style="color:#888">Diagnostics will appear here when a test is running.</span>';
+          document.getElementById("diag-slotgrid").innerHTML = "";
+          return;
+        }
+        if (!diagTestActive && diagSummary) {
+          // Show summary
+          global.innerHTML = `
+            <span class="metric"><b>Peak Throughput</b>: ${
+              diagSummary.peakThroughput > 0
+                ? diagSummary.peakThroughput.toFixed(1)
+                : diagSummary.avgThroughput.toFixed(1)
+            } msg/s</span>
+            <span class="metric"><b>Avg Throughput</b>: ${diagSummary.avgThroughput.toFixed(
+              1
+            )} msg/s</span>
+            <span class="metric"><b>Max Lag</b>: ${diagSummary.maxLag} ms</span>
+            <span class="metric"><b>Total Conflicts</b>: ${
+              diagSummary.totalConflicts
+            }</span>
+            <span class="metric"><b>Total Errors</b>: ${
+              diagSummary.totalErrors
+            }</span>
+            <span class="metric"><b>Total Reclaimed</b>: ${
+              diagSummary.totalReclaimed
+            }</span>
+          `;
+          // Slot grid: show only non-empty slots, or a healthy message
+          const N = diagSummary.slots || 0;
+          const slotState = diagSummary.finalSlotState || [];
+          let nonEmpty = slotState.filter((s) => s && s.status !== 0);
+          let slotHtml = "";
+          if (N && nonEmpty.length === 0) {
+            slotHtml = `<div style="color:#19c37d;font-weight:600;padding:0.5em 0;">All slots healthy (empty)</div>`;
+          } else if (N) {
+            for (let i = 0; i < N; i++) {
+              const slot = slotState[i] || { status: 0 };
+              let color =
+                slot.status === 2
+                  ? "#19c37d"
+                  : slot.status === 1
+                  ? "#e0b800"
+                  : "#e2e6ee";
+              slotHtml += `<div title="Slot ${i} (status: ${slot.status})" style="width:18px;height:18px;border-radius:3px;background:${color};border:1px solid #d0d6e0;"></div>`;
+            }
+          }
+          document.getElementById("diag-slotgrid").innerHTML = slotHtml;
+          return;
+        }
+        // Live stats
+        global.innerHTML = `
+          <span class="metric"><b>Throughput</b>: ${
+            stats.throughput?.toFixed(1) ?? "-"
+          } msg/s</span>
+          <span class="metric"><b>Lag</b>: ${stats.consumerLag ?? "-"} ms</span>
+          <span class="metric"><b>Used</b>: ${stats.used ?? "-"} / ${
+          stats.slots ?? "-"
+        }</span>
+          <span class="metric"><b>Free</b>: ${stats.free ?? "-"}</span>
+          <span class="metric"><b>Conflicts</b>: ${
+            stats.conflicts ?? "-"
+          }</span>
+          <span class="metric"><b>Errors</b>: ${stats.errors ?? "-"}</span>
+          <span class="metric"><b>Reclaimed</b>: ${
+            stats.reclaimed ?? "-"
+          }</span>
+        `;
+        // Slot grid
+        const N = stats.slots || 32;
+        let slotHtml = "";
+        if (stats.slotState) {
+          for (let i = 0; i < N; i++) {
+            const slot = stats.slotState[i] || { status: 0 };
+            let color =
+              slot.status === 2
+                ? "#19c37d"
+                : slot.status === 1
+                ? "#e0b800"
+                : "#e2e6ee";
+            slotHtml += `<div title="Slot ${i} (status: ${slot.status})" style="width:18px;height:18px;border-radius:3px;background:${color};border:1px solid #d0d6e0;"></div>`;
+          }
+        } else {
+          for (let i = 0; i < N; i++) {
+            slotHtml += `<div style="width:18px;height:18px;border-radius:3px;background:#e2e6ee;border:1px solid #d0d6e0;"></div>`;
+          }
+        }
+        document.getElementById("diag-slotgrid").innerHTML = slotHtml;
+      }
+      // Patch each test to start/end diagnostics for its channel
+      window.runStressTest = async (btn) => {
+        btn.disabled = true;
+        const N = 5000,
+          slots = 16,
+          size = 80;
+        let processed = 0,
+          sent = 0;
+        const { channel, buffer } = createChannel({
+          slots,
+          slotSize: size,
+          sweepTimeoutMs: 40,
+        });
+        // No live diagnostics during the test
+        const start = Date.now();
+        // Producer
+        const prod = setInterval(() => {
+          for (let tries = 0; tries < 100 && sent < N; tries++)
+            if (channel.send(encode({ i: sent }))) sent++;
+        }, 0);
+        // Consumer
+        const cons = setInterval(() => {
+          let msg;
+          while ((msg = channel.recv())) processed++;
+        }, 0);
+        const timeout = 2500,
+          t0 = Date.now();
+        while (processed < N && Date.now() - t0 < timeout)
+          await new Promise((r) => setTimeout(r, 10));
+        clearInterval(prod);
+        clearInterval(cons);
+        const duration = Date.now() - start;
+        document.getElementById("stress_result").innerHTML =
+          (processed === N
+            ? '<span class="success">PASS — '
+            : '<span class="fail">FAIL — ') +
+          `Processed ${processed}/${N} (${((processed / N) * 100).toFixed(
+            1
+          )}%)</span>`;
+        document.getElementById(
+          "stress_output"
+        ).textContent = `Duration: ${duration} ms\nLost: ${N - processed}`;
+        // Take a single diagnostics sample at the end
+        const stats = channel.stats();
+        const avgThroughput = duration > 0 ? processed / (duration / 1000) : 0;
+        diagSummary = {
+          peakThroughput: avgThroughput,
+          avgThroughput,
+          maxLag: 0,
+          totalConflicts: stats.conflicts,
+          totalErrors: stats.errors,
+          totalReclaimed: stats.reclaimed,
+          finalSlotState: [],
+          slots,
+        };
+        diagTestActive = false;
+        updateDiagnosticsDashboard();
+        btn.disabled = false;
+      };
+      window.runReclaimTest = async (btn) => {
+        btn.disabled = true;
+        const slots = 12,
+          size = 80;
+        const { channel, buffer } = createChannel({
+          slots,
+          slotSize: size,
+          sweepTimeoutMs: 10,
+        });
+        startDiagnostics({ buffer }, slots);
+        Object.defineProperty(channel, "slotStatus", {
+          value: channel["slotStatus"],
+          writable: false,
+          configurable: true,
+          enumerable: false,
+        });
+        Object.defineProperty(channel, "slotClaimTimestamp", {
+          value: channel["slotClaimTimestamp"],
+          writable: false,
+          configurable: true,
+          enumerable: false,
+        });
+        for (let i = 0; i < slots / 2; i++) {
+          channel.slotStatus[0][i] = 1;
+          channel.slotClaimTimestamp[0][i] = Date.now() - 1000;
+        }
+        await new Promise((r) => setTimeout(r, 1000));
+        const preReclaimed = 0;
+        const stats = channel.stats();
+        document.getElementById("reclaim_result").innerHTML =
+          (stats.reclaimed > preReclaimed
+            ? '<span class="success">PASS — '
+            : '<span class="fail">FAIL — ') +
+          `Slots Reclaimed: ${stats.reclaimed - preReclaimed}</span>`;
+        document.getElementById("reclaim_output").textContent = `Reclaimed: ${
+          stats.reclaimed - preReclaimed
+        }, Errors: ${stats.errors}\nFree slots after: ${stats.free}`;
+        // Use final stats for dashboard summary
+        diagSummary = {
+          peakThroughput: 0,
+          avgThroughput: 0,
+          maxLag: 0,
+          totalConflicts: stats.conflicts,
+          totalErrors: stats.errors,
+          totalReclaimed: stats.reclaimed,
+          finalSlotState: [],
+          slots,
+        };
+        diagTestActive = false;
+        updateDiagnosticsDashboard();
+        btn.disabled = false;
+      };
+      window.runRaceTest = async (btn) => {
+        btn.disabled = true;
+        const producers = 12,
+          consumers = 12,
+          slots = 2,
+          size = 80,
+          N = 2000;
+        let written = 0,
+          read = 0;
+        const { channel, buffer } = createChannel({
+          slots,
+          slotSize: size,
+          sweepTimeoutMs: 30,
+        });
+        startDiagnostics({ buffer }, slots);
+        channel.__getTestStats = () => ({
+          errors: channel.errors,
+          conflicts: channel.conflicts,
+        });
+        const start = Date.now(); // Record actual start time
+        const prodInt = Array.from({ length: producers }, (_, p) =>
+          setInterval(() => {
+            for (let c = 0; c < 100 && written < N; c++)
+              if (channel.send(encode({ w: written }, size))) written++;
+          }, 1)
+        );
+        const consInt = Array.from({ length: consumers }, (_, c) =>
+          setInterval(() => {
+            let msg;
+            while ((msg = channel.recv())) read++;
+          }, 1)
+        );
+        const timeout = 3000;
+        while (read < N && Date.now() - start < timeout)
+          await new Promise((r) => setTimeout(r, 10));
+        prodInt.forEach(clearInterval);
+        consInt.forEach(clearInterval);
+        const { conflicts, errors } = channel.__getTestStats();
+        document.getElementById("race_result").innerHTML =
+          (conflicts > 0 || errors > N / 2
+            ? '<span class="success">PASS — '
+            : '<span class="fail">FAIL — ') +
+          `Conflicts detected: ${conflicts}, Errors: ${errors}`;
+        document.getElementById(
+          "race_output"
+        ).textContent = `Produced: ${written}, Consumed: ${read}, Conflicts: ${conflicts}, Errors: ${errors}`;
+        const duration = Date.now() - start; // Use actual measured duration
+        const stats = channel.stats();
+        const avgThroughput = duration > 0 ? written / (duration / 1000) : 0;
+        diagSummary = {
+          peakThroughput: avgThroughput,
+          avgThroughput,
+          maxLag: 0,
+          totalConflicts: stats.conflicts,
+          totalErrors: stats.errors,
+          totalReclaimed: stats.reclaimed,
+          finalSlotState: [],
+          slots,
+        };
+        diagTestActive = false;
+        updateDiagnosticsDashboard();
+        btn.disabled = false;
+      };
+      window.runCorrectTest = async (btn) => {
+        btn.disabled = true;
+        const slots = 32,
+          size = 80,
+          N = 30;
+        const sent = [],
+          got = [];
+        const { channel, buffer } = createChannel({
+          slots,
+          slotSize: size,
+          sweepTimeoutMs: 50,
+        });
+        startDiagnostics({ buffer }, slots);
+        for (let i = 0; i < N; i++) {
+          const obj = { msg: i, rnd: Math.random() };
+          sent.push(obj);
+          channel.send(encode(obj, size));
+        }
+        let broken = null;
+        const start = Date.now();
+        for (let tr = 0; tr < 200 && got.length < N && !broken; tr++) {
+          let out;
+          while ((out = channel.recv())) {
+            const obj = decode(out);
+            got.push(obj);
+            const ref = sent[obj.msg];
+            if (!ref || ref.rnd !== obj.rnd) broken = obj;
+          }
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        document.getElementById("correct_result").innerHTML = broken
+          ? '<span class="fail">FAIL — Data Corruption!</span>'
+          : got.length === N
+          ? '<span class="success">PASS — All messages correct!</span>'
+          : '<span class="fail">FAIL — Message Loss</span>';
+        document.getElementById("correct_output").textContent =
+          `Sent: ${N}, Received: ${got.length}, Fail? ${
+            broken ? JSON.stringify(broken) : "No"
+          }` +
+          (broken
+            ? `\nMISMATCH: got ${JSON.stringify(broken)} expected rnd=${
+                sent[broken.msg] && sent[broken.msg].rnd
+              }`
+            : "");
+        // Use final stats for dashboard summary
+        const duration = Date.now() - start;
+        const stats = channel.stats();
+        const avgThroughput = duration > 0 ? got.length / (duration / 1000) : 0;
+        diagSummary = {
+          peakThroughput: avgThroughput,
+          avgThroughput,
+          maxLag: 0,
+          totalConflicts: stats.conflicts,
+          totalErrors: stats.errors,
+          totalReclaimed: stats.reclaimed,
+          finalSlotState: [],
+          slots,
+        };
+        diagTestActive = false;
+        updateDiagnosticsDashboard();
         btn.disabled = false;
       };
     </script>

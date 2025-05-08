@@ -26,6 +26,11 @@ app.use(
   "/dist",
   express.static(path.join(__dirname, "packages", "core", "dist"))
 );
+// Serve static files from the diagnostics dist directory (for diagnostics worker module imports)
+app.use(
+  "/diagnostics/dist",
+  express.static(path.join(__dirname, "packages", "diagnostics", "dist"))
+);
 
 // Catch-all: 404 for anything else
 app.use((req, res) => {
