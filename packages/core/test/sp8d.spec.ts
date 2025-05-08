@@ -24,4 +24,5 @@ test("SP8D Advanced Edge Protocols", async ({ page }) => {
   await runAndCheck(page, "#case2 .runbtn", "#reclaim_result");
   await runAndCheck(page, "#case3 .runbtn", "#race_result");
   await runAndCheck(page, "#case4 .runbtn", "#correct_result");
+  await runAndCheck(page, "#case5 .runbtn", "#gencycle_result");
 });
