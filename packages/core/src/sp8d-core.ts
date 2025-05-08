@@ -1,3 +1,8 @@
+/**
+ * Ultra-low-latency, lock-free channel for concurrent message passing.
+ * @remarks Use `createChannel` to construct. For advanced diagnostics, see exposed readonly arrays.
+ */
+
 export type Mode = "SPSC" | "MPSC" | "MPMC";
 
 export interface ChannelStats {
@@ -58,10 +63,17 @@ class SegmentMeta {
 }
 
 export class ChannelCore implements Channel {
+  /** SharedArrayBuffer backing this channel. */
   private readonly sab: SharedArrayBuffer;
+  /** Segment metadata (head, tail, count) for each segment. */
   public readonly segmentMetas: SegmentMeta[];
-  private readonly slotStatus: Uint8Array[];
-  private readonly slotClaimTimestamp: Uint32Array[];
+  /** Slot status arrays (diagnostics only, readonly). */
+  public readonly slotStatus: Uint8Array[];
+  /** Slot generation/cycle tag arrays (diagnostics only, readonly). */
+  public readonly slotGeneration: Uint8Array[];
+  /** Slot claim timestamp arrays (diagnostics only, readonly). */
+  public readonly slotClaimTimestamp: Uint32Array[];
+  /** Slot payload arrays (internal use). */
   private readonly payload: Uint8Array[];
   private readonly slots: number;
   private readonly segments: number;
@@ -95,6 +107,7 @@ export class ChannelCore implements Channel {
     let offset = META_BYTES;
     this.segmentMetas = [];
     this.slotStatus = [];
+    this.slotGeneration = [];
     this.slotClaimTimestamp = [];
     this.payload = [];
 
@@ -104,6 +117,9 @@ export class ChannelCore implements Channel {
       this.slotStatus.push(new Uint8Array(sab, offset, slots));
       offset += slots;
       // align to 4 bytes
+      if (offset % 4 !== 0) offset += 4 - (offset % 4);
+      this.slotGeneration.push(new Uint8Array(sab, offset, slots));
+      offset += slots;
       if (offset % 4 !== 0) offset += 4 - (offset % 4);
       this.slotClaimTimestamp.push(new Uint32Array(sab, offset, slots));
       offset += slots * 4;
@@ -135,6 +151,12 @@ export class ChannelCore implements Channel {
       ? Math.abs(producerId) % this.segments
       : 0;
   }
+  /**
+   * Send a message. Throws if the channel is full or payload is too large.
+   * @param payload Message to send (ArrayBufferView)
+   * @param producerId Optional producer ID for multi-segment routing
+   * @returns true if sent, throws otherwise
+   */
   send(payload: ArrayBufferView, producerId?: number): boolean {
     if (this.closed) throw new Error("Channel is closed");
     const binary = new Uint8Array(
@@ -151,6 +173,7 @@ export class ChannelCore implements Channel {
     const seg = this.pickSegment(producerId);
     const { head, count } = this.segmentMetas[seg];
     const statusArr = this.slotStatus[seg];
+    const genArr = this.slotGeneration[seg];
     const claimTS = this.slotClaimTimestamp[seg];
     const payloadArr = this.payload[seg];
 
@@ -160,6 +183,7 @@ export class ChannelCore implements Channel {
         this.conflicts++; // increment on every contention
         continue;
       }
+      // Atomically claim slot and check generation
       if (
         Atomics.compareExchange(
           statusArr,
@@ -168,6 +192,12 @@ export class ChannelCore implements Channel {
           STATUS_CLAIMED
         ) === STATUS_EMPTY
       ) {
+        // On wraparound, increment generation
+        Atomics.store(
+          genArr,
+          localHead,
+          (Atomics.load(genArr, localHead) + 1) & 0xff
+        );
         Atomics.store(claimTS, localHead, Number(Date.now() % 0xffffffff));
         const offset = localHead * this.messageSize;
         payloadArr.set(binary.subarray(0, this.messageSize), offset);
@@ -180,15 +210,39 @@ export class ChannelCore implements Channel {
     }
     return false;
   }
+  /**
+   * Try to send a message. Returns false if the channel is full or payload is too large.
+   * @param payload Message to send (ArrayBufferView)
+   * @param producerId Optional producer ID for multi-segment routing
+   * @returns true if sent, false otherwise
+   */
+  trySend(payload: ArrayBufferView, producerId?: number): boolean {
+    try {
+      return this.send(payload, producerId);
+    } catch {
+      return false;
+    }
+  }
+  /**
+   * Send a JSON-serializable object. Throws if the channel is full or payload is too large.
+   * @param obj Object to send
+   * @param producerId Optional producer ID for multi-segment routing
+   * @returns true if sent, throws otherwise
+   */
   sendJSON(obj: object, producerId?: number): boolean {
     const bin = new TextEncoder().encode(JSON.stringify(obj));
     return this.send(bin, producerId);
   }
+  /**
+   * Receive a message. Returns null if the channel is empty.
+   * @returns Uint8Array or null
+   */
   recv(): Uint8Array | null {
     if (this.closed) return null;
     for (let seg = 0; seg < this.segments; seg++) {
       const { tail, count } = this.segmentMetas[seg];
       const statusArr = this.slotStatus[seg];
+      const genArr = this.slotGeneration[seg];
       const claimTS = this.slotClaimTimestamp[seg];
       const payloadArr = this.payload[seg];
       for (let tries = 0; tries < this.slots; tries++) {
@@ -197,6 +251,7 @@ export class ChannelCore implements Channel {
           this.conflicts++; // increment on every contention
           continue;
         }
+        // Atomically claim slot for reading
         if (
           Atomics.compareExchange(
             statusArr,
@@ -207,6 +262,12 @@ export class ChannelCore implements Channel {
         ) {
           const offset = localTail * this.messageSize;
           const buf = payloadArr.slice(offset, offset + this.messageSize);
+          // Increment generation on release
+          Atomics.store(
+            genArr,
+            localTail,
+            (Atomics.load(genArr, localTail) + 1) & 0xff
+          );
           Atomics.store(statusArr, localTail, STATUS_EMPTY);
           Atomics.store(claimTS, localTail, 0);
           Atomics.sub(count, 0, 1);
@@ -218,6 +279,21 @@ export class ChannelCore implements Channel {
     }
     return null;
   }
+  /**
+   * Try to receive a message. Returns null if the channel is empty.
+   * @returns Uint8Array or null
+   */
+  tryRecv(): Uint8Array | null {
+    try {
+      return this.recv();
+    } catch {
+      return null;
+    }
+  }
+  /**
+   * Receive a JSON-serialized object. Returns null if the channel is empty or parse fails.
+   * @returns object or null
+   */
   recvJSON(): object | null {
     const bin = this.recv();
     if (!bin) return null;
@@ -227,12 +303,19 @@ export class ChannelCore implements Channel {
       return null;
     }
   }
+  /**
+   * Async iterator for receiving messages.
+   */
   async *[Symbol.asyncIterator](): AsyncIterator<Uint8Array, void> {
     while (!this.closed) {
       const value = await this.recvAsync();
       if (value != null) yield value;
     }
   }
+  /**
+   * Receive a message asynchronously. Resolves when a message is available or channel is closed.
+   * @returns Promise<Uint8Array | null>
+   */
   async recvAsync(): Promise<Uint8Array | null> {
     while (!this.closed) {
       const val = this.recv();
@@ -241,6 +324,9 @@ export class ChannelCore implements Channel {
     }
     return null;
   }
+  /**
+   * Returns true if the channel is full.
+   */
   full(): boolean {
     if (this.closed) return false;
     for (let seg = 0; seg < this.segments; seg++) {
@@ -249,6 +335,9 @@ export class ChannelCore implements Channel {
     }
     return true;
   }
+  /**
+   * Returns true if the channel is empty.
+   */
   empty(): boolean {
     if (this.closed) return true;
     for (let seg = 0; seg < this.segments; seg++) {
@@ -256,6 +345,9 @@ export class ChannelCore implements Channel {
     }
     return true;
   }
+  /**
+   * Close the channel and stop all background tasks.
+   */
   close(): void {
     this.closed = true;
     clearInterval(this.sweeperInterval);
@@ -271,6 +363,46 @@ export class ChannelCore implements Channel {
       }
     }
   }
+  /**
+   * Asynchronously close the channel, waiting for all background tasks to stop.
+   * @returns Promise<void>
+   */
+  async closeAsync(): Promise<void> {
+    this.close();
+    // Wait a tick to ensure all intervals are cleared
+    await new Promise((r) => setTimeout(r, 0));
+  }
+  /**
+   * Reset the channel to its initial state (empties all slots, resets counters).
+   * Does not reallocate the buffer.
+   */
+  reset(): void {
+    this.close();
+    for (let seg = 0; seg < this.segments; seg++) {
+      Atomics.store(this.segmentMetas[seg].head, 0, 0);
+      Atomics.store(this.segmentMetas[seg].tail, 0, 0);
+      Atomics.store(this.segmentMetas[seg].count, 0, 0);
+      const statusArr = this.slotStatus[seg];
+      const genArr = this.slotGeneration[seg];
+      const claimTS = this.slotClaimTimestamp[seg];
+      for (let i = 0; i < this.slots; i++) {
+        Atomics.store(statusArr, i, STATUS_EMPTY);
+        Atomics.store(genArr, i, 0);
+        Atomics.store(claimTS, i, 0);
+      }
+    }
+    this.errors = 0;
+    this.conflicts = 0;
+    this.reclaimed = 0;
+    this.closed = false;
+    this.sweeperInterval = setInterval(
+      () => this.sweepStaleSlots(),
+      Math.max(this.sweepTimeoutMs, 10)
+    );
+  }
+  /**
+   * Get current channel statistics.
+   */
   stats(): ChannelStats {
     let used = 0;
     for (let seg = 0; seg < this.segments; seg++) {
@@ -286,16 +418,27 @@ export class ChannelCore implements Channel {
       reclaimed: this.reclaimed,
     };
   }
+  /**
+   * Get a human-readable info string for this channel.
+   */
   info(): string {
     return `SP8D Channel, mode=${this.mode}, slots=${this.slots}, segments=${this.segments}`;
   }
+  /**
+   * Validate the channel's internal state. Throws if protocol invariants are violated.
+   */
   validate(): void {
     for (let seg = 0; seg < this.segments; seg++) {
       for (let i = 0; i < this.slots; i++) {
         const st = Atomics.load(this.slotStatus[seg], i);
+        const gen = Atomics.load(this.slotGeneration[seg], i);
         if (![STATUS_EMPTY, STATUS_CLAIMED, STATUS_READY].includes(st))
           throw new Error(
             `Protocol violation: Unknown slot status ${st} at seg:${seg} idx:${i}`
+          );
+        if (typeof gen !== "number" || gen < 0 || gen > 255)
+          throw new Error(
+            `Protocol violation: Invalid generation ${gen} at seg:${seg} idx:${i}`
           );
       }
     }
@@ -305,6 +448,7 @@ export class ChannelCore implements Channel {
     const now = Number(Date.now() % 0xffffffff);
     for (let seg = 0; seg < this.segments; seg++) {
       const statusArr = this.slotStatus[seg];
+      const genArr = this.slotGeneration[seg];
       const claimTS = this.slotClaimTimestamp[seg];
       const count = this.segmentMetas[seg].count;
       for (let i = 0; i < this.slots; i++) {
@@ -315,6 +459,8 @@ export class ChannelCore implements Channel {
           ts !== 0 &&
           now - Number(ts) > this.sweepTimeoutMs
         ) {
+          // Increment generation on reclaim
+          Atomics.store(genArr, i, (Atomics.load(genArr, i) + 1) & 0xff);
           Atomics.store(statusArr, i, STATUS_EMPTY);
           Atomics.store(claimTS, i, 0);
           const used = Atomics.load(count, 0);
@@ -349,10 +495,18 @@ export function createChannel(opts: {
   // Align status to 4 bytes
   const perSegStatusAligned =
     perSegStatus + (perSegStatus % 4 === 0 ? 0 : 4 - (perSegStatus % 4));
+  const perSegGeneration = slots;
+  const perSegGenerationAligned =
+    perSegGeneration +
+    (perSegGeneration % 4 === 0 ? 0 : 4 - (perSegGeneration % 4));
   const perSegTimestamp = slots * 4;
   const perSegPayload = slots * slotSize;
   const perSeg =
-    perSegHeader + perSegStatusAligned + perSegTimestamp + perSegPayload;
+    perSegHeader +
+    perSegStatusAligned +
+    perSegGenerationAligned +
+    perSegTimestamp +
+    perSegPayload;
   const totalSize = META_BYTES + perSeg * segments;
   const sab = new SharedArrayBuffer(totalSize);
   new Uint32Array(sab, 0, 10).set(metaHeader);

@@ -24,6 +24,47 @@ const { channel, buffer } = createChannel({ slots: 32, slotSize: 64 });
 // Use channel.send(), channel.recv(), etc.
 ```
 
+## Advanced Usage & New Features
+
+### Non-throwing Send/Receive
+
+```js
+// trySend returns false instead of throwing if the channel is full or payload is too large
+const ok = channel.trySend(new Uint8Array([1, 2, 3]));
+if (!ok) {
+  // handle backpressure or retry
+}
+
+// tryRecv returns null if the channel is empty
+const msg = channel.tryRecv();
+if (msg) {
+  // process message
+}
+```
+
+### Async Channel Close
+
+```js
+// Gracefully close the channel and wait for all background tasks to stop
+await channel.closeAsync();
+```
+
+### Channel Reset (for reuse)
+
+```js
+// Reset the channel to its initial state (empties all slots, resets counters)
+channel.reset();
+```
+
+### Diagnostics & Debugging
+
+```js
+// Access slot status, generation, and timestamps for live diagnostics
+console.log(channel.slotStatus[0]); // Uint8Array of slot statuses
+console.log(channel.slotGeneration[0]); // Uint8Array of generation tags
+console.log(channel.slotClaimTimestamp[0]); // Uint32Array of claim timestamps
+```
+
 ## Test Harness
 
 - [Live Test Harness](https://sp8d.netlify.app/)
