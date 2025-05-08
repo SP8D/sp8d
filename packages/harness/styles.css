@@ -33,7 +33,9 @@ html {
   font-size: var(--font-size-base);
   background: var(--color-bg);
 }
-*, *:before, *:after {
+*,
+*:before,
+*:after {
   box-sizing: inherit;
 }
 body {

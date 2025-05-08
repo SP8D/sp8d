@@ -12,32 +12,20 @@ function updateDiagnosticsDashboard() {
   if (!el) return;
   el.innerHTML = `
     <span class="metric">Peak Throughput: ${
-      diag.peakThroughput !== undefined
-        ? Math.round(diag.peakThroughput)
-        : "-"
+      diag.peakThroughput !== undefined ? Math.round(diag.peakThroughput) : "-"
     } msg/s</span>
     <span class="metric">Avg Throughput: ${
-      diag.avgThroughput !== undefined
-        ? Math.round(diag.avgThroughput)
-        : "-"
+      diag.avgThroughput !== undefined ? Math.round(diag.avgThroughput) : "-"
     } msg/s</span>
     <span class="metric">Max Lag: ${diag.maxLag ?? "-"} ms</span>
-    <span class="metric">Total Conflicts: ${
-      diag.totalConflicts ?? "-"
-    }</span>
+    <span class="metric">Total Conflicts: ${diag.totalConflicts ?? "-"}</span>
     <span class="metric">Total Errors: ${diag.totalErrors ?? "-"}</span>
-    <span class="metric">Total Reclaimed: ${
-      diag.totalReclaimed ?? "-"
-    }</span>
+    <span class="metric">Total Reclaimed: ${diag.totalReclaimed ?? "-"}</span>
     <span class="metric">Slots: ${diag.slots ?? "-"}</span>
   `;
   // Slot grid visualisation (optional, only if slot state is present)
   const slotGrid = document.getElementById("diag-slotgrid");
-  if (
-    slotGrid &&
-    diag.finalSlotState &&
-    Array.isArray(diag.finalSlotState)
-  ) {
+  if (slotGrid && diag.finalSlotState && Array.isArray(diag.finalSlotState)) {
     slotGrid.innerHTML = diag.finalSlotState
       .map((slot, i) => {
         let color = "#e2e6ee";

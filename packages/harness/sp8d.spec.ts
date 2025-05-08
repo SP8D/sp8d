@@ -10,7 +10,7 @@ async function runAndCheck(page, buttonSelector, resultSelector) {
       return el && el.textContent && !/Not run/.test(el.textContent);
     },
     resultSelector,
-    { timeout: 15000 }
+    { timeout: 60000 }
   );
   // Now wait for PASS or FAIL
   const resultText = await page.locator(resultSelector).innerText();
@@ -25,4 +25,5 @@ test("SP8D Advanced Edge Protocols", async ({ page }) => {
   await runAndCheck(page, "#case3 .runbtn", "#race_result");
   await runAndCheck(page, "#case4 .runbtn", "#correct_result");
   await runAndCheck(page, "#case5 .runbtn", "#gencycle_result");
+  await runAndCheck(page, "#case6 .runbtn", "#dos_result");
 });
