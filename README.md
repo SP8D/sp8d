@@ -10,6 +10,7 @@ A modern monorepo for the SP8D protocol ecosystem: ultra-low-latency, robust bro
 - [@sp8d/core](./packages/core) — The core SP8D protocol implementation ([npm](https://www.npmjs.com/package/@sp8d/core), [GitHub](https://github.com/SP8D/sp8d/tree/main/packages/core))
 - [@sp8d/diagnostics](./packages/diagnostics) — Diagnostics utilities for live stats and protocol correctness ([npm](https://www.npmjs.com/package/@sp8d/diagnostics), [GitHub](https://github.com/SP8D/sp8d/tree/main/packages/diagnostics))
 - [@sp8d/harness](./packages/harness) — E2E test harness and diagnostics dashboard for SP8D protocol ([GitHub](https://github.com/SP8D/sp8d/tree/main/packages/harness))
+  - Modular: main.js, styles.css, and scenarios/ for maintainable, production-grade browser testing
 
 See each package's README for detailed usage, API, and development notes.
 

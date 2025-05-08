@@ -47,7 +47,9 @@ npm run e2e:dist
 ## Structure
 
 - `index.html` — Main dashboard UI
-- `scenarios/` — Modular scenario test logic
+- `main.js` — Main harness logic (modular, imports all scenarios)
+- `styles.css` — Harness styles (modular, imported in index.html)
+- `scenarios/` — Modular scenario test logic (registered via scenarios/index.js)
 - `sp8d-diagnostics-worker.js` — Diagnostics worker for live stats
 - `sp8d.spec.ts` — Playwright e2e tests
 - `serve.js` — Dev server

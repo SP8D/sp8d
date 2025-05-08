@@ -65,9 +65,19 @@ console.log(channel.slotGeneration[0]); // Uint8Array of generation tags
 console.log(channel.slotClaimTimestamp[0]); // Uint32Array of claim timestamps
 ```
 
+### Async Send with Backpressure (Browser-First)
+
+```js
+// sendAsync waits for a slot to become available (with optional timeout/abort)
+await channel.sendAsync(new Uint8Array([1, 2, 3]), undefined, {
+  timeoutMs: 1000,
+});
+// This is browser-friendly and ensures no message loss under bursty load.
+```
+
 ## Test Harness
 
-The E2E test harness and diagnostics dashboard are now in the [@sp8d/harness](../harness) package.
+The E2E test harness and diagnostics dashboard are now in the [@sp8d/harness](../harness) package. The harness is fully modularized (see main.js, styles.css, and scenarios/).
 
 - To run the harness locally:
   ```sh

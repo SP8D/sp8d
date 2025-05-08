@@ -20,6 +20,10 @@ fs.mkdirSync(publishDir, { recursive: true });
 
 // Copy index.html
 fs.copyFileSync(indexSrc, indexDest);
+// Copy main.js
+fs.copyFileSync(path.join(harnessDir, "main.js"), path.join(publishDir, "main.js"));
+// Copy styles.css
+fs.copyFileSync(path.join(harnessDir, "styles.css"), path.join(publishDir, "styles.css"));
 // Copy scenarios/
 fs.mkdirSync(scenariosDest, { recursive: true });
 for (const file of fs.readdirSync(scenariosSrc)) {

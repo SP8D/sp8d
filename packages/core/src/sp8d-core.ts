@@ -471,6 +471,34 @@ export class ChannelCore implements Channel {
       }
     }
   }
+  /**
+   * Send a message asynchronously. Waits until a slot is available or timeout/abort.
+   * Uses polling for browser compatibility (Atomics.wait is not available on main thread).
+   * Never queues messages internally; each call only waits for a slot, then sends.
+   * @param payload Message to send (ArrayBufferView)
+   * @param producerId Optional producer ID for multi-segment routing
+   * @param opts Optional: { timeoutMs?: number, signal?: AbortSignal }
+   * @returns Promise<boolean> Resolves true if sent, false if timeout/abort
+   */
+  async sendAsync(
+    payload: ArrayBufferView,
+    producerId?: number,
+    opts?: { timeoutMs?: number; signal?: AbortSignal }
+  ): Promise<boolean> {
+    const start = Date.now();
+    while (true) {
+      if (opts?.signal?.aborted) return false;
+      try {
+        if (this.send(payload, producerId)) return true;
+      } catch (e) {
+        // If payload too large, propagate error
+        if (String(e).includes("Payload too large")) throw e;
+      }
+      if (opts?.timeoutMs && Date.now() - start > opts.timeoutMs) return false;
+      // Use a short delay for browser compatibility (no Atomics.wait on main thread)
+      await new Promise((r) => setTimeout(r, 2));
+    }
+  }
 }
 
 // In createChannel, fix buffer size calculation for alignment
