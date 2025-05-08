@@ -1,0 +1,18 @@
+{
+  "name": "@sp8d/harness",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SP8D protocol e2e test harness and diagnostics dashboard.",
+  "main": "index.html",
+  "type": "module",
+  "dependencies": {
+    "@sp8d/core": "*",
+    "@sp8d/diagnostics": "*"
+  },
+  "scripts": {
+    "dev": "node serve.js",
+    "dev:dist": "HARNESS_DIST=1 node serve.js",
+    "build": "echo 'No build step needed for harness (static files)'",
+    "prepare:netlify": "node scripts/prepare-netlify.js"
+  }
+}

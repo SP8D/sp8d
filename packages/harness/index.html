@@ -516,7 +516,7 @@
       <span style="font-size: 0.97rem; opacity: 0.7"
         >Review the <b>test source</b> on
         <a
-          href="https://github.com/SP8D/sp8d/tree/main/packages/core/test/index.html"
+          href="https://github.com/SP8D/sp8d/tree/main/packages/harness/index.html"
           target="_blank"
           >GitHub</a
         >
@@ -530,7 +530,7 @@
       import { registerCorrectScenario } from "./scenarios/correct.js";
       import { registerGenCycleScenario } from "./scenarios/gencycle.js";
       import { encode, decode } from "./scenarios/utils.js";
-      import { createChannel } from "../dist/sp8d-core.js";
+      import { createChannel } from "/core/sp8d-core.js";
       // Shared state for scenarios
       const diagSummary = {};
       const diagTestActive = { value: false };
@@ -579,7 +579,7 @@
             .join("");
         }
       }
-      // Register modular scenarios
+      // Register modular scenarios (each attaches its handler to window)
       registerStressScenario({
         createChannel,
         updateDiagnosticsDashboard,

@@ -8,16 +8,32 @@
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.3",
+    "concurrently": "^8.2.2",
     "esbuild": "^0.25.3",
     "express": "^5.1.0",
-    "typescript": "^5.8.3"
+    "husky": "^9.0.0",
+    "lint-staged": "^15.2.0",
+    "typescript": "^5.8.3",
+    "wait-on": "^7.2.0"
   },
   "scripts": {
-    "build": "npm run build -w @sp8d/core && npm run build -w @sp8d/diagnostics",
-    "test": "npm run test:core",
-    "test:core": "npx playwright test packages/core/test",
-    "serve": "node serve.js",
-    "prepare:netlify": "node scripts/prepare-netlify.js"
+    "core:build": "npm run build -w @sp8d/core",
+    "diagnostics:build": "npm run build -w @sp8d/diagnostics",
+    "harness:build": "npm run build -w @sp8d/harness",
+    "build": "npm run core:build && npm run diagnostics:build && npm run harness:build",
+    "test": "npm run test -w @sp8d/core && npm run test -w @sp8d/diagnostics && npm run test -w @sp8d/harness",
+    "harness:dev": "npm run dev -w @sp8d/harness",
+    "harness:dev:dist": "npm run dev:dist -w @sp8d/harness",
+    "harness:prepare:netlify": "npm run prepare:netlify -w @sp8d/harness",
+    "harness:test:e2e": "playwright test",
+    "e2e": "npm run harness:test:e2e",
+    "e2e:dist": "npm run build && npm run harness:prepare:netlify && concurrently -k -s first \"npm run harness:dev:dist\" \"wait-on http://localhost:8080 && npm run harness:test:e2e\"",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "packages/{core,diagnostics,harness}/**/*": [
+      "sh -c 'npm run e2e:dist'"
+    ]
   },
   "type": "module"
 }

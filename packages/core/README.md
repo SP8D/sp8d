@@ -67,16 +67,17 @@ console.log(channel.slotClaimTimestamp[0]); // Uint32Array of claim timestamps
 
 ## Test Harness
 
-- [Live Test Harness](https://sp8d.netlify.app/)
+The E2E test harness and diagnostics dashboard are now in the [@sp8d/harness](../harness) package.
 
-Run the local test harness:
-
-```sh
-npm run build -w @sp8d/core
-npm run serve
-```
-
-Then open http://localhost:8080/ in your browser.
+- To run the harness locally:
+  ```sh
+  npm run serve:harness
+  # Then open http://localhost:8080/
+  ```
+- To run e2e tests:
+  ```sh
+  npm run test -w @sp8d/harness
+  ```
 
 ## Running Tests in All Browsers
 
@@ -88,11 +89,21 @@ npm run test:core
 
 This ensures the root Playwright configuration is used. Running tests from within the core directory is not supported.
 
+## Automated E2E Checks
+
+E2E tests are automatically run on pre-push (and can be run manually) from the monorepo root. This ensures that all protocol changes are validated in a real browser before code is pushed or merged.
+
+To run manually:
+
+```sh
+npm run e2e:dist
+```
+
 ## See Also
 
 - [@sp8d/core on npm](https://www.npmjs.com/package/@sp8d/core)
 - [@sp8d/core source & issues on GitHub](https://github.com/SP8D/sp8d/tree/main/packages/core)
-- [Test Harness (index.html)](./test/index.html)
+- [Test Harness (index.html)](../harness/index.html)
 - [Live Test Harness (Netlify)](https://sp8d.netlify.app/)
 - [Monorepo Root](https://github.com/SP8D/sp8d)
 

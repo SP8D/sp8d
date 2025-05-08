@@ -9,6 +9,7 @@ A modern monorepo for the SP8D protocol ecosystem: ultra-low-latency, robust bro
 
 - [@sp8d/core](./packages/core) — The core SP8D protocol implementation ([npm](https://www.npmjs.com/package/@sp8d/core), [GitHub](https://github.com/SP8D/sp8d/tree/main/packages/core))
 - [@sp8d/diagnostics](./packages/diagnostics) — Diagnostics utilities for live stats and protocol correctness ([npm](https://www.npmjs.com/package/@sp8d/diagnostics), [GitHub](https://github.com/SP8D/sp8d/tree/main/packages/diagnostics))
+- [@sp8d/harness](./packages/harness) — E2E test harness and diagnostics dashboard for SP8D protocol ([GitHub](https://github.com/SP8D/sp8d/tree/main/packages/harness))
 
 See each package's README for detailed usage, API, and development notes.
 
@@ -38,11 +39,70 @@ npm test
 
 This will run Playwright tests for @sp8d/core using the root configuration and all supported browsers. If additional packages add automated tests in the future, the root test script will be updated to include them.
 
-## Development
+## Running All E2E Tests
 
-- Each package is independently buildable and publishable.
-- Use npm workspaces for local development and linking.
-- Shared TypeScript config in `tsconfig.base.json`.
+To run all browser-based e2e tests for the monorepo, use:
+
+```
+npm run test:e2e
+```
+
+This will run Playwright tests in all supported browsers using the root configuration, targeting the harness package.
+
+## Development & Scripts
+
+## Scripts (Monorepo Root)
+
+| Script                  | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| core:build              | Build @sp8d/core package                          |
+| diagnostics:build       | Build @sp8d/diagnostics package                   |
+| harness:build           | Build @sp8d/harness package (no-op, static files) |
+| build                   | Build all packages                                |
+| test                    | Run all tests for all packages                    |
+| harness:dev             | Start harness dev server (source mode)            |
+| harness:dev:dist        | Serve harness distributable (Netlify-like)        |
+| harness:prepare:netlify | Prepare harness dist/ for Netlify publish         |
+| harness:test:e2e        | Run Playwright e2e tests for harness              |
+| e2e                     | Alias for harness:test:e2e                        |
+
+- **Local Dev Server (harness, source mode):**
+  ```sh
+  npm run harness:dev
+  # Open http://localhost:8080/
+  ```
+- **Distributable/Production Preview (Netlify-like):**
+  ```sh
+  npm run build
+  npm run harness:prepare:netlify
+  npm run harness:dev:dist
+  # Open http://localhost:8080/
+  ```
+- **Run All E2E Tests:**
+  ```sh
+  npm run e2e
+  # or: npm run harness:test:e2e
+  ```
+- **Prepare Netlify Publish Directory:**
+  ```sh
+  npm run harness:prepare:netlify
+  ```
+
+## Automated Pre-commit & Pre-push Checks
+
+This monorepo uses [Husky](https://typicode.github.io/husky/) and [lint-staged](https://github.com/okonet/lint-staged) to enforce quality and integration at every commit:
+
+- **Pre-commit:** Runs lint, typecheck, and unit tests on staged files for fast feedback.
+- **Pre-push:** Runs full e2e tests against the distributable harness (`npm run e2e:dist`).
+- If any check fails, the commit or push is blocked.
+
+You can always run the full e2e workflow manually:
+
+```sh
+npm run e2e:dist
+```
+
+This ensures that the distributable harness is always tested in a real browser before code is pushed or merged.
 
 ## Structure
 
@@ -50,7 +110,6 @@ This will run Playwright tests for @sp8d/core using the root configuration and a
 /packages
   /core         # @sp8d/core source, tests, README
   /diagnostics  # @sp8d/diagnostics source, README
-serve.js        # Local dev server for test harness
 playwright.config.ts # E2E/browser test config
 ```
 
@@ -149,7 +208,7 @@ Enables “desktop-class” multi-agent coordination, backpressure, and resource
   - Compare SP8D and vanilla MessageChannel, side-by-side (A/B)
   - Stress with “panic” (stall), fault injection, recovery
 
-- **Test Cases (see `test/index.html`):**
+- **Test Cases (see `packages/harness/index.html`):**
 
   1. **Live High-Throughput Stress:**
      Measures throughput and loss under heavy load.
@@ -226,7 +285,7 @@ diagnostics.start();
 
 - **Enumerated test cases** mapped to internal protection/diagnostic logic.
 - Each test: scenario ➔ result ➔ relevant fields (`.errors`, `.reclaimed`, `.conflicts`, etc.).
-- See `test/index.html` for live mapping.
+- See `packages/harness/index.html` for live mapping.
 
 ---
 

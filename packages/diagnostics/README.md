@@ -27,11 +27,35 @@ diagnostics.onUpdate((stats) => {
 diagnostics.start();
 ```
 
+## Live Diagnostics & E2E Harness
+
+The live diagnostics dashboard and e2e test harness are now in the [@sp8d/harness](../harness) package.
+
+- To run the harness locally:
+  ```sh
+  npm run serve:harness
+  # Then open http://localhost:8080/
+  ```
+- To run e2e tests:
+  ```sh
+  npm run test -w @sp8d/harness
+  ```
+
+## Automated E2E Checks
+
+E2E tests are automatically run on pre-push (and can be run manually) from the monorepo root. This ensures that all diagnostics and protocol changes are validated in a real browser before code is pushed or merged.
+
+To run manually:
+
+```sh
+npm run e2e:dist
+```
+
 ## See Also
 
 - [@sp8d/diagnostics source & issues on GitHub](https://github.com/SP8D/sp8d/tree/main/packages/diagnostics)
 - [@sp8d/core](../core) ([npm](https://www.npmjs.com/package/@sp8d/core))
-- [Test Harness (index.html)](../core/test/index.html)
+- [Test Harness (index.html)](../harness/index.html)
 - [Live Test Harness](https://sp8d.netlify.app/)
 - [Monorepo Root](https://github.com/SP8D/sp8d)
 
