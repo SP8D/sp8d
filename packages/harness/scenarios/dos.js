@@ -1,5 +1,3 @@
-// Debug: confirm dos.js is loaded
-console.log("[dos.js] loaded");
 import { encode } from "./utils.js";
 
 export function registerDosScenario({

@@ -24,58 +24,80 @@
         <b>Legend:</b> <span class="dot dot-success"></span>Pass,
         <span class="dot dot-fail"></span>Fail.
       </div>
-      <div class="header-links">
+      <nav class="header-links">
         <a
           class="header-link"
           href="https://github.com/SP8D/sp8d"
           target="_blank"
+          rel="noopener"
           >GitHub</a
         >
         <a
           class="header-link"
           href="https://www.npmjs.com/package/@sp8d/core"
           target="_blank"
+          rel="noopener"
           >npm</a
         >
-      </div>
+      </nav>
     </header>
     <main>
-      <section
-        id="diagnostics-dashboard"
-        style="
-          margin-bottom: 2.5rem;
-          min-height: 60px;
-          background: #f3f6fa;
-          border: 1px solid #e2e6ee;
-          border-radius: 8px;
-          padding: 1rem 0 0.5rem 0;
-        "
-      >
-        <div
-          id="diag-global"
-          style="
-            display: flex;
-            gap: 1.5rem;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-bottom: 0.7rem;
-            min-height: 28px;
-          "
-        >
-          Loading diagnostics…
-        </div>
-        <div
-          id="diag-slotgrid"
-          style="
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(18px, 1fr));
-            gap: 2px;
-            max-width: 700px;
-          "
-        ></div>
+      <section id="diagnostics-dashboard">
+        <div id="diag-global">Loading diagnostics…</div>
+        <div id="diag-slotgrid"></div>
       </section>
-      <section class="tests">
-        <div class="testcase" id="case1">
+      <section class="carousel-container">
+        <div
+          class="carousel-overlay carousel-overlay-left"
+          aria-hidden="true"
+        ></div>
+        <button
+          class="carousel-chevron-btn carousel-chevron-left"
+          tabindex="0"
+          role="button"
+          aria-label="Previous Test"
+          id="carousel-prev"
+          type="button"
+        >
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 28 28"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path d="M18 6L10 14L18 22" />
+          </svg>
+        </button>
+        <div class="carousel-track" id="carousel-track"></div>
+        <div
+          class="carousel-overlay carousel-overlay-right"
+          aria-hidden="true"
+        ></div>
+        <button
+          class="carousel-chevron-btn carousel-chevron-right"
+          tabindex="0"
+          role="button"
+          aria-label="Next Test"
+          id="carousel-next"
+          type="button"
+        >
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 28 28"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path d="M10 6L18 14L10 22" />
+          </svg>
+        </button>
+      </section>
+      <!-- The original .tests section will be moved into .carousel-track by JS -->
+      <section class="tests" style="display: none">
+        <div class="testcase" id="live-high-throughput-stress">
           <div class="testcase-header">
             <h2>1. <b>Live High-Throughput Stress</b></h2>
             <button class="runbtn" onclick="runStressTest(this)">▶ Run</button>
@@ -99,7 +121,7 @@
           </div>
         </div>
 
-        <div class="testcase" id="case2">
+        <div class="testcase" id="slot-reclamation-stale-job-handling">
           <div class="testcase-header">
             <h2>2. <b>Slot Reclamation & Stale-Job Handling</b></h2>
             <button class="runbtn" onclick="runReclaimTest(this)">▶ Run</button>
@@ -122,7 +144,7 @@
           </div>
         </div>
 
-        <div class="testcase" id="case3">
+        <div class="testcase" id="race-condition-conflict-resolution">
           <div class="testcase-header">
             <h2>3. <b>Race Condition & Conflict Resolution</b></h2>
             <button class="runbtn" onclick="runRaceTest(this)">▶ Run</button>
@@ -146,7 +168,7 @@
           </div>
         </div>
 
-        <div class="testcase" id="case4">
+        <div class="testcase" id="protocol-correctness-data-integrity">
           <div class="testcase-header">
             <h2>4. <b>Protocol Correctness & Data Integrity</b></h2>
             <button class="runbtn" onclick="runCorrectTest(this)">▶ Run</button>
@@ -169,7 +191,7 @@
           </div>
         </div>
 
-        <div class="testcase" id="case5">
+        <div class="testcase" id="slot-generation-cycle-tag-wraparound">
           <div class="testcase-header">
             <h2>5. <b>Slot Generation/Cycle Tag Wraparound</b></h2>
             <button class="runbtn" onclick="runGenCycleWrapTest(this)">
@@ -194,7 +216,7 @@
           </div>
         </div>
 
-        <div class="testcase" id="case6">
+        <div class="testcase" id="dos-flood-resilience">
           <div class="testcase-header">
             <h2>6. <b>DoS/Flood Resilience</b></h2>
             <button class="runbtn" onclick="runDosTest(this)">▶ Run</button>
@@ -220,15 +242,16 @@
       <hr />
     </main>
     <footer>
-      <span style="font-size: 0.97rem; opacity: 0.7"
-        >Review the <b>test source</b> on
+      <span class="footer-note">
+        Review the <b>test source</b> on
         <a
           href="https://github.com/SP8D/sp8d/tree/main/packages/harness/index.html"
           target="_blank"
+          rel="noopener"
           >GitHub</a
         >
-        for more details.</span
-      >
+        for more details.
+      </span>
     </footer>
     <script type="module" src="./main.js"></script>
   </body>
