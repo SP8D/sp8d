@@ -1,6 +1,6 @@
 {
   "name": "@sp8d/diagnostics",
-  "version": "0.1.0",
+  "version": "0.2.2",
   "description": "Diagnostics utilities for SP8D channels.",
   "main": "dist/sp8d-diagnostics.js",
   "types": "dist/sp8d-diagnostics.d.ts",
@@ -15,7 +15,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@sp8d/core": "0.2.1"
-  },
-  "devDependencies": {}
+    "@sp8d/core": "0.2.2"
+  }
 }

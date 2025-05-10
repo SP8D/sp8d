@@ -1,6 +1,6 @@
 {
   "name": "@sp8d/core",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Ultra-low-latency bounded channel for web-based AI copilots.",
   "main": "dist/sp8d-core.js",
   "types": "dist/sp8d-core.d.ts",
