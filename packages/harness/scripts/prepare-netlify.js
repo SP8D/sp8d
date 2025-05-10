@@ -140,6 +140,12 @@ try {
     }
     fs.copyFileSync(src, dest);
   }
+  // Write Netlify _headers file for SharedArrayBuffer support
+  const headersFile = path.join(publishDir, "_headers");
+  fs.writeFileSync(
+    headersFile,
+    `/*\n  Cross-Origin-Opener-Policy: same-origin\n  Cross-Origin-Embedder-Policy: require-corp\n`
+  );
 } catch (err) {
   console.error("[prepare-netlify] ERROR:", err);
   process.exit(1);
