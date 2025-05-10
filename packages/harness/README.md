@@ -10,29 +10,37 @@ E2E test harness and diagnostics dashboard for the SP8D protocol ecosystem.
 
 ## Usage
 
-### Local Dev Server (source mode)
+### Local Dev Server (dynamic, source mode)
 
 ```
 npm run dev
 # Open http://localhost:8080/
 ```
 
-### Distributable/Production Preview (Netlify-like)
+### Build Static/SEO Version (for Netlify or production)
 
 ```
-npm run build    # from monorepo root
-npm run prepare:netlify    # from harness/
-npm run dev:dist
+npm run build
+# Output: dist/index.html (with all test cards statically rendered)
+```
+
+### Preview Static Build Locally
+
+```
+npm run preview
 # Open http://localhost:8080/
 ```
 
-### Prepare Netlify Publish Directory
+### Netlify Deploy
 
-```
-npm run prepare:netlify
-```
+- Netlify should run `npm run build` before deploy.
+- The `dist/` directory is the publish directory.
 
-E2E tests are run from the monorepo root using Playwright.
+## Production/Static Build Details
+
+- The harness `dist/` directory includes browser-ready `sp8d-core.js`, `sp8d-diagnostics.js`, their `.js.map` source maps, and `.d.ts` type declarations.
+- All browser imports use relative paths (e.g., `import { createChannel } from "./sp8d-core.js"`).
+- The static build will fail if these files are missing; always run `npm run build` from the monorepo root before deploying or serving the static build.
 
 ## Automated E2E Checks
 
@@ -44,6 +52,8 @@ To run manually:
 npm run e2e:dist
 ```
 
+- Playwright tests now wait for the UI to show "PASS" or "FAIL" before asserting, improving reliability and eliminating race conditions with intermediate states like "Running...".
+
 ## Structure
 
 - `index.html` — Main dashboard UI
@@ -52,8 +62,8 @@ npm run e2e:dist
 - `scenarios/` — Modular scenario test logic (registered via scenarios/index.js)
 - `sp8d-diagnostics-worker.js` — Diagnostics worker for live stats
 - `sp8d.spec.ts` — Playwright e2e tests
-- `serve.js` — Dev server
-- `scripts/prepare-netlify.js` — Netlify publish script
+- `serve.js` — Dev/static server
+- `scripts/prepare-netlify.js` — Static build script
 
 ## Dependencies
 

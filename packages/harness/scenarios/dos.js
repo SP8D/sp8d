@@ -7,7 +7,7 @@ export function registerDosScenario({
   diagTestActive,
 }) {
   console.log("[dos.js] registerDosScenario called");
-  window.runDosTest = async (btn) => {
+  window.runDosTest = async (btn, { isAborted, onAbort } = {}) => {
     console.log("[dos.js] runDosTest triggered");
     btn.disabled = true;
     const N = 50000,
@@ -26,12 +26,14 @@ export function registerDosScenario({
     // Producer: sendAsync in a loop, but yield and update UI every 1000
     const producer = (async () => {
       for (let i = 0; i < N; i++) {
+        if (isAborted && isAborted()) return;
         const ok = await channel.sendAsync(encode({ i }), undefined, {
           timeoutMs: 10000,
         });
         if (!ok) timeouts++;
         sent++;
         if (i % 1000 === 0) {
+          if (isAborted && isAborted()) return;
           document.getElementById(
             "dos_output"
           ).textContent = `Sent: ${sent}  Processed: ${processed}  Timeouts: ${timeouts}`;
@@ -43,22 +45,24 @@ export function registerDosScenario({
     // Consumer: drain as fast as possible, yield every 1000
     const consumer = (async () => {
       while (!producerDone || !channel.empty()) {
+        if (isAborted && isAborted()) return;
         let msg;
         let localCount = 0;
         while ((msg = channel.recv())) {
           processed++;
           localCount++;
           if (localCount % 1000 === 0) {
+            if (isAborted && isAborted()) return;
             document.getElementById(
               "dos_output"
             ).textContent = `Sent: ${sent}  Processed: ${processed}  Timeouts: ${timeouts}`;
-            await new Promise((r) => setTimeout(r, 0));
           }
         }
-        await new Promise((r) => setTimeout(r, 1));
+        await new Promise((r) => setTimeout(r, 0));
       }
     })();
     await Promise.all([producer, consumer]);
+    if (isAborted && isAborted()) return;
     const duration = Date.now() - start;
     document.getElementById("dos_result").innerHTML =
       (processed === N && timeouts === 0

@@ -17,18 +17,17 @@
     "wait-on": "^7.2.0"
   },
   "scripts": {
+    "prepare": "husky install",
+    "build": "npm run core:build && npm run diagnostics:build && npm run harness:build",
+    "test": "npm run test -w @sp8d/core && npm run test -w @sp8d/diagnostics && npm run test -w @sp8d/harness",
     "core:build": "npm run build -w @sp8d/core",
     "diagnostics:build": "npm run build -w @sp8d/diagnostics",
     "harness:build": "npm run build -w @sp8d/harness",
-    "build": "npm run core:build && npm run diagnostics:build && npm run harness:build",
-    "test": "npm run test -w @sp8d/core && npm run test -w @sp8d/diagnostics && npm run test -w @sp8d/harness",
     "harness:dev": "npm run dev -w @sp8d/harness",
-    "harness:dev:dist": "npm run dev:dist -w @sp8d/harness",
-    "harness:prepare:netlify": "npm run prepare:netlify -w @sp8d/harness",
+    "harness:preview": "npm run preview -w @sp8d/harness",
     "harness:test:e2e": "playwright test",
     "e2e": "npm run harness:test:e2e",
-    "e2e:dist": "npm run build && npm run harness:prepare:netlify && concurrently -k -s first \"npm run harness:dev:dist\" \"wait-on http://localhost:8080 && npm run harness:test:e2e\"",
-    "prepare": "husky install"
+    "e2e:dist": "npm run build && concurrently -k -s first \"npm run harness:preview\" \"wait-on http://localhost:8080 && npm run harness:test:e2e\""
   },
   "lint-staged": {
     "packages/{core,diagnostics,harness}/**/*": [

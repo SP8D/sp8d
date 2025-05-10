@@ -1,7 +1,7 @@
 // Diagnostics Worker for SP8D Test Harness
 // This worker attaches to a channel buffer, runs diagnostics, and posts updates to the main thread.
-import { attachChannel } from "@sp8d/core";
-import { createChannelDiagnostics } from "@sp8d/diagnostics";
+import { attachChannel } from "./sp8d-core.js";
+import { createChannelDiagnostics } from "./sp8d-diagnostics.js";
 
 let diagnostics = null;
 

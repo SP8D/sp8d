@@ -1,11 +1,23 @@
-import { encode, decode } from './utils.js';
+import { encode, decode } from "./utils.js";
 
-export function registerCorrectScenario({ createChannel, updateDiagnosticsDashboard, diagSummary, diagTestActive }) {
-  window.runCorrectTest = async (btn) => {
+export function registerCorrectScenario({
+  createChannel,
+  updateDiagnosticsDashboard,
+  diagSummary,
+  diagTestActive,
+}) {
+  window.runCorrectTest = async (btn, { isAborted, onAbort } = {}) => {
     btn.disabled = true;
-    const slots = 32, size = 80, N = 30;
-    const sent = [], got = [];
-    const { channel } = createChannel({ slots, slotSize: size, sweepTimeoutMs: 50 });
+    const slots = 32,
+      size = 80,
+      N = 30;
+    const sent = [],
+      got = [];
+    const { channel } = createChannel({
+      slots,
+      slotSize: size,
+      sweepTimeoutMs: 50,
+    });
     for (let i = 0; i < N; i++) {
       const obj = { msg: i, rnd: Math.random() };
       sent.push(obj);
@@ -14,6 +26,7 @@ export function registerCorrectScenario({ createChannel, updateDiagnosticsDashbo
     let broken = null;
     const start = Date.now();
     for (let tr = 0; tr < 200 && got.length < N && !broken; tr++) {
+      if (isAborted && isAborted()) return;
       let out;
       while ((out = channel.recv())) {
         const obj = decode(out);
@@ -23,14 +36,21 @@ export function registerCorrectScenario({ createChannel, updateDiagnosticsDashbo
       }
       await new Promise((r) => setTimeout(r, 50));
     }
+    if (isAborted && isAborted()) return;
     document.getElementById("correct_result").innerHTML = broken
       ? '<span class="fail">FAIL — Data Corruption!</span>'
       : got.length === N
       ? '<span class="success">PASS — All messages correct!</span>'
       : '<span class="fail">FAIL — Message Loss</span>';
     document.getElementById("correct_output").textContent =
-      `Sent: ${N}, Received: ${got.length}, Fail? ${broken ? JSON.stringify(broken) : "No"}` +
-      (broken ? `\nMISMATCH: got ${JSON.stringify(broken)} expected rnd=${sent[broken.msg] && sent[broken.msg].rnd}` : "");
+      `Sent: ${N}, Received: ${got.length}, Fail? ${
+        broken ? JSON.stringify(broken) : "No"
+      }` +
+      (broken
+        ? `\nMISMATCH: got ${JSON.stringify(broken)} expected rnd=${
+            sent[broken.msg] && sent[broken.msg].rnd
+          }`
+        : "");
     const duration = Date.now() - start;
     const stats = channel.stats();
     const avgThroughput = duration > 0 ? got.length / (duration / 1000) : 0;

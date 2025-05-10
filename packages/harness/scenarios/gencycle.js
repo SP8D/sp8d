@@ -1,14 +1,23 @@
-export function registerGenCycleScenario({ createChannel, updateDiagnosticsDashboard, diagSummary, diagTestActive }) {
-  window.runGenCycleWrapTest = async (btn) => {
+export function registerGenCycleScenario({
+  createChannel,
+  updateDiagnosticsDashboard,
+  diagSummary,
+  diagTestActive,
+}) {
+  window.runGenCycleWrapTest = async (btn, { isAborted, onAbort } = {}) => {
     btn.disabled = true;
-    if (typeof stopDiagnostics === 'function') stopDiagnostics();
-    diagSummary.value = null;
-    updateDiagnosticsDashboard();
-    const slots = 1, size = 32, cycles = 300;
-    const { channel } = createChannel({ slots, slotSize: size, sweepTimeoutMs: 20 });
+    const slots = 1,
+      size = 32,
+      cycles = 300;
+    const { channel } = createChannel({
+      slots,
+      slotSize: size,
+      sweepTimeoutMs: 20,
+    });
     let errors = 0;
     let lastGen = null;
     for (let i = 0; i < cycles; i++) {
+      if (isAborted && isAborted()) return;
       try {
         channel.send(new Uint8Array([i % 256]));
         const msg = channel.recv();
@@ -19,7 +28,9 @@ export function registerGenCycleScenario({ createChannel, updateDiagnosticsDashb
       } catch (e) {
         errors++;
       }
+      await new Promise((r) => setTimeout(r, 1));
     }
+    if (isAborted && isAborted()) return;
     let protocolError = false;
     try {
       channel.validate();
@@ -31,7 +42,9 @@ export function registerGenCycleScenario({ createChannel, updateDiagnosticsDashb
       !protocolError && errors === 0
         ? '<span class="success">PASS — '
         : '<span class="fail">FAIL — ' +
-          `Cycles: ${cycles}, Errors: ${errors}${protocolError ? ", Protocol Error" : ""}</span>`;
+          `Cycles: ${cycles}, Errors: ${errors}${
+            protocolError ? ", Protocol Error" : ""
+          }</span>`;
     document.getElementById(
       "gencycle_output"
     ).textContent = `Cycles: ${cycles}, Errors: ${errors}, Final Gen: ${lastGen}, Protocol Error: ${protocolError}`;

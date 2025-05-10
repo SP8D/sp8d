@@ -1,7 +1,12 @@
-import { encode } from './utils.js';
+import { encode } from "./utils.js";
 
-export function registerStressScenario({ createChannel, updateDiagnosticsDashboard, diagSummary, diagTestActive }) {
-  window.runStressTest = async (btn) => {
+export function registerStressScenario({
+  createChannel,
+  updateDiagnosticsDashboard,
+  diagSummary,
+  diagTestActive,
+}) {
+  window.runStressTest = async (btn, { isAborted, onAbort } = {}) => {
     btn.disabled = true;
     const N = 5000,
       slots = 16,
@@ -15,19 +20,34 @@ export function registerStressScenario({ createChannel, updateDiagnosticsDashboa
     });
     const start = Date.now();
     const prod = setInterval(() => {
+      if (isAborted && isAborted()) return;
       for (let tries = 0; tries < 100 && sent < N; tries++)
         if (channel.send(encode({ i: sent }))) sent++;
     }, 0);
     const cons = setInterval(() => {
+      if (isAborted && isAborted()) return;
       let msg;
       while ((msg = channel.recv())) processed++;
     }, 0);
+    onAbort &&
+      onAbort(() => {
+        clearInterval(prod);
+        clearInterval(cons);
+        btn.disabled = false;
+      });
     const timeout = 2500,
       t0 = Date.now();
-    while (processed < N && Date.now() - t0 < timeout)
+    while (processed < N && Date.now() - t0 < timeout) {
+      if (isAborted && isAborted()) {
+        clearInterval(prod);
+        clearInterval(cons);
+        return;
+      }
       await new Promise((r) => setTimeout(r, 10));
+    }
     clearInterval(prod);
     clearInterval(cons);
+    if (isAborted && isAborted()) return;
     const duration = Date.now() - start;
     document.getElementById("stress_result").innerHTML =
       (processed === N

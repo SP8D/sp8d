@@ -11,8 +11,8 @@
   },
   "scripts": {
     "dev": "node serve.js",
-    "dev:dist": "HARNESS_DIST=1 node serve.js",
-    "build": "echo 'No build step needed for harness (static files)'",
-    "prepare:netlify": "node scripts/prepare-netlify.js"
+    "build": "node scripts/prepare-netlify.js",
+    "preview": "HARNESS_DIST=1 node serve.js",
+    "start": "npm run dev"
   }
 }

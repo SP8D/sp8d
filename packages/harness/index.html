@@ -2,8 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>SP8D Protocol Test Harness</title>
+    <title>
+      SP8D Protocol Test Harness: Browser Concurrency, Diagnostics & E2E
+      Validation
+    </title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="SP8D Protocol Test Harness: Run, validate, and benchmark browser concurrency, message-passing, and diagnostics scenarios for AI and data science copilots. Ultra-low-latency, robust, and SEO-friendly."
+    />
+    <link rel="canonical" href="https://sp8d.netlify.app/" />
+    <meta
+      property="og:title"
+      content="SP8D Protocol Test Harness: Browser Concurrency, Diagnostics & E2E Validation"
+    />
+    <meta
+      property="og:description"
+      content="Run, validate, and benchmark browser concurrency, message-passing, and diagnostics scenarios for AI and data science copilots. Ultra-low-latency, robust, and SEO-friendly."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sp8d.netlify.app/" />
+    <!-- <meta property="og:image" content="https://sp8d.netlify.app/og-image.png" /> -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="SP8D Protocol Test Harness: Browser Concurrency, Diagnostics & E2E Validation"
+    />
+    <meta
+      name="twitter:description"
+      content="Run, validate, and benchmark browser concurrency, message-passing, and diagnostics scenarios for AI and data science copilots."
+    />
+    <!-- <meta name="twitter:image" content="https://sp8d.netlify.app/og-image.png" /> -->
     <link
       href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap"
       rel="stylesheet"
@@ -11,246 +40,169 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header>
-      <div class="header-title">SP8D Protocol — Advanced Test Harness</div>
-      <div class="header-sub">
-        SP8D is a high-performance, robust browser protocol for safe, lossless,
-        and concurrent message passing—designed for demanding AI and data
-        science copilots.
-      </div>
-      <div class="header-desc">
-        <b>How to use:</b> Click <b>Run</b> on any test to simulate real-world
-        browser concurrency scenarios. Results update live below each test.<br />
-        <b>Legend:</b> <span class="dot dot-success"></span>Pass,
-        <span class="dot dot-fail"></span>Fail.
-      </div>
-      <nav class="header-links">
+    <nav class="navbar-exec" aria-label="Main Navigation">
+      <div class="navbar-exec-inner navbar-exec-center">
         <a
-          class="header-link"
+          class="navbar-link navbar-link-docs"
+          href="https://sp8d.github.io"
+          target="_blank"
+          rel="noopener"
+          aria-label="SP8D Documentation"
+          >Docs</a
+        >
+        <a
+          class="navbar-link navbar-link-github"
           href="https://github.com/SP8D/sp8d"
           target="_blank"
           rel="noopener"
+          aria-label="SP8D GitHub Repository"
           >GitHub</a
         >
         <a
-          class="header-link"
+          class="navbar-link navbar-link-npm"
           href="https://www.npmjs.com/package/@sp8d/core"
           target="_blank"
           rel="noopener"
+          aria-label="SP8D npm Package"
           >npm</a
         >
-      </nav>
+      </div>
+    </nav>
+    <header>
+      <div
+        class="header-title"
+        style="
+          color: var(--color-header-fg);
+          text-shadow: 0 2px 8px rgba(26, 34, 51, 0.08);
+        "
+      >
+        SP8D Protocol — Advanced Test Harness
+      </div>
+      <div class="header-sub">
+        Ultra-low-latency, robust browser protocol for safe, lossless, and
+        concurrent message passing—designed for demanding AI and data science
+        copilots.
+      </div>
+      <div class="header-desc-blocks">
+        <div class="header-desc-why">
+          <b>Why SP8D?</b> Modern browsers and AI copilots demand reliability,
+          speed, and zero data loss. SP8D delivers executive-grade concurrency
+          and diagnostics for mission-critical workflows.
+        </div>
+      </div>
     </header>
+    <div class="header-browser-status">
+      <span title="Chromium"
+        ><img
+          src="./assets/Chromium.png"
+          alt="Chromium"
+          width="28"
+          height="28"
+        />
+        Chromium <span class="tick">&#10003;</span></span
+      >
+      <span title="Firefox"
+        ><img src="./assets/Firefox.png" alt="Firefox" width="28" height="28" />
+        Firefox <span class="tick">&#10003;</span></span
+      >
+      <span title="Safari"
+        ><img src="./assets/Safari.png" alt="Safari" width="28" height="28" />
+        Safari <span class="tick">&#10003;</span></span
+      >
+      <span title="Microsoft Edge"
+        ><img src="./assets/Edge.png" alt="Edge" width="28" height="28" /> Edge
+        <span class="tick">&#10003;</span></span
+      >
+    </div>
     <main>
-      <section id="diagnostics-dashboard">
-        <div id="diag-global">Loading diagnostics…</div>
-        <div id="diag-slotgrid"></div>
-      </section>
-      <section class="carousel-container">
-        <div
-          class="carousel-overlay carousel-overlay-left"
-          aria-hidden="true"
-        ></div>
-        <button
-          class="carousel-chevron-btn carousel-chevron-left"
-          tabindex="0"
-          role="button"
-          aria-label="Previous Test"
-          id="carousel-prev"
-          type="button"
-        >
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 28 28"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+      <section class="carousel-section">
+        <h2 class="section-heading">Protocol Test Scenarios</h2>
+        <div class="section-desc">
+          Interactive, real-world browser concurrency and protocol validation.
+        </div>
+        <div class="carousel-container">
+          <div
+            class="carousel-overlay carousel-overlay-left"
             aria-hidden="true"
+          ></div>
+          <button
+            class="carousel-chevron-btn carousel-chevron-left"
+            tabindex="0"
+            role="button"
+            aria-label="Previous Test"
+            id="carousel-prev"
+            type="button"
           >
-            <path d="M18 6L10 14L18 22" />
-          </svg>
-        </button>
-        <div class="carousel-track" id="carousel-track"></div>
-        <div
-          class="carousel-overlay carousel-overlay-right"
-          aria-hidden="true"
-        ></div>
-        <button
-          class="carousel-chevron-btn carousel-chevron-right"
-          tabindex="0"
-          role="button"
-          aria-label="Next Test"
-          id="carousel-next"
-          type="button"
-        >
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 28 28"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 28 28"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path d="M18 6L10 14L18 22" />
+            </svg>
+          </button>
+          <div class="carousel-track" id="carousel-track" tabindex="0"></div>
+          <div
+            class="carousel-overlay carousel-overlay-right"
             aria-hidden="true"
+          ></div>
+          <button
+            class="carousel-chevron-btn carousel-chevron-right"
+            tabindex="0"
+            role="button"
+            aria-label="Next Test"
+            id="carousel-next"
+            type="button"
           >
-            <path d="M10 6L18 14L10 22" />
-          </svg>
-        </button>
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 28 28"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path d="M10 6L18 14L10 22" />
+            </svg>
+          </button>
+        </div>
       </section>
-      <!-- The original .tests section will be moved into .carousel-track by JS -->
-      <section class="tests" style="display: none">
-        <div class="testcase" id="live-high-throughput-stress">
-          <div class="testcase-header">
-            <h2>1. <b>Live High-Throughput Stress</b></h2>
-            <button class="runbtn" onclick="runStressTest(this)">▶ Run</button>
-          </div>
-          <div class="test-desc">
-            <b>Scenario:</b> Simulates 5,000 message events between async
-            producer and consumer, measuring actual messages processed and time
-            to completion.<br />
-            <b>Why It Matters:</b> Legacy <code>postMessage</code> or event bus
-            patterns collapse well below this throughput. Real data science
-            copilots require <b>thousands/sec without UI freezes</b>.
-          </div>
-          <div class="metricbar">
-            <span class="metric" id="stress_result">Not run</span>
-          </div>
-          <div class="live-output" id="stress_output">
-            Duration: - ms Lost: -
-          </div>
-          <div class="case-footer">
-            Key metric: throughput, no missed/lost messages, no lag.
-          </div>
+      <section id="diagnostics-section">
+        <h2 class="section-heading">Protocol Health Summary</h2>
+        <div class="section-desc">
+          Key protocol stats and health indicators (updated after each test
+          run).
         </div>
-
-        <div class="testcase" id="slot-reclamation-stale-job-handling">
-          <div class="testcase-header">
-            <h2>2. <b>Slot Reclamation & Stale-Job Handling</b></h2>
-            <button class="runbtn" onclick="runReclaimTest(this)">▶ Run</button>
-          </div>
-          <div class="test-desc">
-            <b>Scenario:</b> Intentionally abandons some job slots to see if
-            protocol reclaims memory/slots automatically.<br />
-            <b>Why It Matters:</b> This is vital for long-running browser
-            sessions&mdash;leaks or stuck jobs can creep in and kill
-            reliability.
-          </div>
-          <div class="metricbar">
-            <span class="metric" id="reclaim_result">Not run</span>
-          </div>
-          <div class="live-output" id="reclaim_output">
-            Reclaimed: -, Errors: - Free slots after: -
-          </div>
-          <div class="case-footer">
-            Key metric: Reclaimed slot count, protocol recovery visible in logs.
-          </div>
-        </div>
-
-        <div class="testcase" id="race-condition-conflict-resolution">
-          <div class="testcase-header">
-            <h2>3. <b>Race Condition & Conflict Resolution</b></h2>
-            <button class="runbtn" onclick="runRaceTest(this)">▶ Run</button>
-          </div>
-          <div class="test-desc">
-            <b>Scenario:</b> Multiple producers and consumers hammer the shared
-            channel, purposely colliding on slots.
-            <br />
-            <b>Why It Matters:</b> Race bugs in message-passing systems are the
-            #1 hidden browser reliability risk. SP8D must resolve conflicts
-            cleanly.
-          </div>
-          <div class="metricbar">
-            <span class="metric" id="race_result">Not run</span>
-          </div>
-          <div class="live-output" id="race_output">
-            Produced: -, Consumed: -, Conflicts: -, Errors: -
-          </div>
-          <div class="case-footer">
-            Key metric: # of resolved conflicts and error count.
-          </div>
-        </div>
-
-        <div class="testcase" id="protocol-correctness-data-integrity">
-          <div class="testcase-header">
-            <h2>4. <b>Protocol Correctness & Data Integrity</b></h2>
-            <button class="runbtn" onclick="runCorrectTest(this)">▶ Run</button>
-          </div>
-          <div class="test-desc">
-            <b>Scenario:</b> Sends randomized messages and checks every output
-            for corruption, order, duplicates, or loss.
-            <br />
-            <b>Why It Matters:</b> Real-world browsers lose/corrupt data under
-            stress if protocol is weak—financial workflows can't tolerate this.
-          </div>
-          <div class="metricbar">
-            <span class="metric" id="correct_result">Not run</span>
-          </div>
-          <div class="live-output" id="correct_output">
-            Sent: -, Received: -, Fail? No
-          </div>
-          <div class="case-footer">
-            Key metric: end-to-end message correctness, reports first failure.
-          </div>
-        </div>
-
-        <div class="testcase" id="slot-generation-cycle-tag-wraparound">
-          <div class="testcase-header">
-            <h2>5. <b>Slot Generation/Cycle Tag Wraparound</b></h2>
-            <button class="runbtn" onclick="runGenCycleWrapTest(this)">
-              ▶ Run
-            </button>
-          </div>
-          <div class="test-desc">
-            <b>Scenario:</b> Repeatedly fills and drains a slot to force the
-            slot generation/cycle tag (Gen/Cycle Byte) to wrap from 255 to 0.<br />
-            <b>Why It Matters:</b> Ensures protocol correctness and no message
-            loss or corruption even after many cycles, validating the slot
-            generation logic.
-          </div>
-          <div class="metricbar">
-            <span class="metric" id="gencycle_result">Not run</span>
-          </div>
-          <div class="live-output" id="gencycle_output">
-            Cycles: - Errors: -
-          </div>
-          <div class="case-footer">
-            Key metric: No protocol errors, all slots healthy after wraparound.
-          </div>
-        </div>
-
-        <div class="testcase" id="dos-flood-resilience">
-          <div class="testcase-header">
-            <h2>6. <b>DoS/Flood Resilience</b></h2>
-            <button class="runbtn" onclick="runDosTest(this)">▶ Run</button>
-          </div>
-          <div class="test-desc">
-            <b>Scenario:</b> Floods the channel with 50,000+ messages as fast as
-            possible, simulating a denial-of-service or buggy producer.<br />
-            <b>Why It Matters:</b> Validates protocol stability, error handling,
-            and resource usage under extreme load. Ensures no crash, memory
-            leak, or starvation of legitimate consumers.
-          </div>
-          <div class="metricbar">
-            <span class="metric" id="dos_result">Not run</span>
-          </div>
-          <div class="live-output" id="dos_output">
-            Duration: - ms Lost: - Send errors: -
-          </div>
-          <div class="case-footer">
-            Key metric: No crash, no memory leak, no starvation, error count.
-          </div>
-        </div>
+        <section id="diagnostics-dashboard">
+          <div id="diag-global">Loading diagnostics…</div>
+        </section>
       </section>
       <hr />
     </main>
     <footer>
       <span class="footer-note">
-        Review the <b>test source</b> on
+        <a href="https://sp8d.github.io" target="_blank" rel="noopener">Docs</a>
+        &nbsp;|&nbsp;
         <a
           href="https://github.com/SP8D/sp8d/tree/main/packages/harness/index.html"
           target="_blank"
           rel="noopener"
           >GitHub</a
         >
-        for more details.
+        &nbsp;|&nbsp;
+        <a
+          href="https://www.npmjs.com/package/@sp8d/core"
+          target="_blank"
+          rel="noopener"
+          >npm</a
+        >
+        <br />
+        <span class="footer-copyright">
+          &copy; 2025 SP8D Protocol. All rights reserved.
+        </span>
       </span>
     </footer>
     <script type="module" src="./main.js"></script>

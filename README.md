@@ -24,10 +24,12 @@ See each package's README for detailed usage, API, and development notes.
    ```sh
    npm run build
    ```
-3. **Run the test harness:**
+   - The build process ensures browser-ready `.js`, `.js.map`, and `.d.ts` files for `@sp8d/core` and `@sp8d/diagnostics` are copied into the harness `dist/` directory for static hosting and debugging. All browser imports in the harness use relative paths to these files.
+   - The static build will fail if these files are missing; always run `npm run build` from the monorepo root before deploying or serving the static build.
+3. **Run the test harness (dev mode):**
    ```sh
-   npm run serve
-   # Then open http://localhost:8080/
+   npm run harness:dev
+   # Open http://localhost:8080/
    ```
 
 ## Running All Tests
@@ -54,39 +56,37 @@ This will run Playwright tests in all supported browsers using the root configur
 
 ## Scripts (Monorepo Root)
 
-| Script                  | Description                                       |
-| ----------------------- | ------------------------------------------------- |
-| core:build              | Build @sp8d/core package                          |
-| diagnostics:build       | Build @sp8d/diagnostics package                   |
-| harness:build           | Build @sp8d/harness package (no-op, static files) |
-| build                   | Build all packages                                |
-| test                    | Run all tests for all packages                    |
-| harness:dev             | Start harness dev server (source mode)            |
-| harness:dev:dist        | Serve harness distributable (Netlify-like)        |
-| harness:prepare:netlify | Prepare harness dist/ for Netlify publish         |
-| harness:test:e2e        | Run Playwright e2e tests for harness              |
-| e2e                     | Alias for harness:test:e2e                        |
+| Script            | Description                                     |
+| ----------------- | ----------------------------------------------- |
+| core:build        | Build @sp8d/core package                        |
+| diagnostics:build | Build @sp8d/diagnostics package                 |
+| harness:build     | Build @sp8d/harness package (static/SEO build)  |
+| build             | Build all packages                              |
+| test              | Run all tests for all packages                  |
+| harness:dev       | Start harness dev server (dynamic, source mode) |
+| harness:preview   | Serve harness static build from dist/           |
+| harness:test:e2e  | Run Playwright e2e tests for harness            |
+| e2e               | Alias for harness:test:e2e                      |
 
 - **Local Dev Server (harness, source mode):**
   ```sh
   npm run harness:dev
   # Open http://localhost:8080/
   ```
-- **Distributable/Production Preview (Netlify-like):**
+- **Build Static/SEO Version (for Netlify or production):**
   ```sh
-  npm run build
-  npm run harness:prepare:netlify
-  npm run harness:dev:dist
+  npm run harness:build
+  # Output: packages/harness/dist/index.html
+  ```
+- **Preview Static Build Locally:**
+  ```sh
+  npm run harness:preview
   # Open http://localhost:8080/
   ```
 - **Run All E2E Tests:**
   ```sh
   npm run e2e
   # or: npm run harness:test:e2e
-  ```
-- **Prepare Netlify Publish Directory:**
-  ```sh
-  npm run harness:prepare:netlify
   ```
 
 ## Automated Pre-commit & Pre-push Checks
@@ -111,6 +111,7 @@ This ensures that the distributable harness is always tested in a real browser b
 /packages
   /core         # @sp8d/core source, tests, README
   /diagnostics  # @sp8d/diagnostics source, README
+  /harness      # @sp8d/harness test harness, README
 playwright.config.ts # E2E/browser test config
 ```
 

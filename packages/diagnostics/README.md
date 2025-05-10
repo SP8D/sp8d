@@ -27,6 +27,15 @@ diagnostics.onUpdate((stats) => {
 diagnostics.start();
 ```
 
+## Browser/Static Harness Usage
+
+- The browser-ready ESM bundle (`sp8d-diagnostics.js`), its source map (`.js.map`), and type declarations (`.d.ts`, `.d.ts.map`) are included in the harness static build for debugging and TypeScript support.
+- When using in the browser (e.g., in the harness), import with a relative path:
+  ```js
+  import { createChannelDiagnostics } from "./sp8d-diagnostics.js";
+  ```
+- Always run `npm run build` from the monorepo root before deploying or serving the static harness build.
+
 ## Live Diagnostics & E2E Harness
 
 The live diagnostics dashboard and e2e test harness are now in the [@sp8d/harness](../harness) package.

@@ -24,6 +24,15 @@ const { channel, buffer } = createChannel({ slots: 32, slotSize: 64 });
 // Use channel.send(), channel.recv(), etc.
 ```
 
+## Browser/Static Harness Usage
+
+- The browser-ready ESM bundle (`sp8d-core.js`), its source map (`.js.map`), and type declarations (`.d.ts`, `.d.ts.map`) are included in the harness static build for debugging and TypeScript support.
+- When using in the browser (e.g., in the harness), import with a relative path:
+  ```js
+  import { createChannel } from "./sp8d-core.js";
+  ```
+- Always run `npm run build` from the monorepo root before deploying or serving the static harness build.
+
 ## Advanced Usage & New Features
 
 ### Non-throwing Send/Receive
