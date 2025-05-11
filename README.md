@@ -119,7 +119,21 @@ playwright.config.ts # E2E/browser test config
 
 - [@sp8d/core on npm](https://www.npmjs.com/package/@sp8d/core)
 - [GitHub repository](https://github.com/SP8D/sp8d)
-- [Live Test Harness](https://sp8d.netlify.app/)
+- [Live Test Harness](https://harness.sp8d.com/)
+
+## Documentation
+
+Comprehensive documentation is available at [https://sp8d.github.io/](https://sp8d.github.io/). Key topics:
+
+- [What is SP8D?](https://sp8d.github.io/introduction/what-is-sp8d)
+- [Channel API Reference](https://sp8d.github.io/api-reference/channel-api)
+- [Concurrency Models](https://sp8d.github.io/principles/concurrency-models)
+- [Quickstart Guide](https://sp8d.github.io/quickstart/installation)
+- [Minimal Example](https://sp8d.github.io/quickstart/minimal-example)
+- [Common Recipes](https://sp8d.github.io/quickstart/common-recipes)
+- [FAQs](https://sp8d.github.io/guides-and-howtos/faqs)
+
+See the [full documentation](https://sp8d.github.io/) for more.
 
 ## Contributing
 

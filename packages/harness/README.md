@@ -70,6 +70,16 @@ npm run e2e:dist
 - [@sp8d/core](../core)
 - [@sp8d/diagnostics](../diagnostics)
 
+## Documentation
+
+- [SP8D Docs Home](https://sp8d.github.io/)
+- [API Reference: Channel](https://sp8d.github.io/api-reference/channel-api)
+- [Quickstart](https://sp8d.github.io/quickstart/installation)
+- [Minimal Example](https://sp8d.github.io/quickstart/minimal-example)
+- [FAQs](https://sp8d.github.io/guides-and-howtos/faqs)
+
+See the [full documentation](https://sp8d.github.io/) for more.
+
 ---
 
 For more details, see the root [README](../../README.md).

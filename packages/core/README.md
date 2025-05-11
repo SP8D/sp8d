@@ -118,12 +118,24 @@ To run manually:
 npm run e2e:dist
 ```
 
+## Documentation
+
+- [SP8D Docs Home](https://sp8d.github.io/)
+- [API Reference: Channel](https://sp8d.github.io/api-reference/channel-api)
+- [Concurrency Models](https://sp8d.github.io/principles/concurrency-models)
+- [Quickstart](https://sp8d.github.io/quickstart/installation)
+- [Minimal Example](https://sp8d.github.io/quickstart/minimal-example)
+- [Common Recipes](https://sp8d.github.io/quickstart/common-recipes)
+- [FAQs](https://sp8d.github.io/guides-and-howtos/faqs)
+
+For more, visit the [full documentation](https://sp8d.github.io/).
+
 ## See Also
 
 - [@sp8d/core on npm](https://www.npmjs.com/package/@sp8d/core)
 - [@sp8d/core source & issues on GitHub](https://github.com/SP8D/sp8d/tree/main/packages/core)
 - [Test Harness (index.html)](../harness/index.html)
-- [Live Test Harness (Netlify)](https://sp8d.netlify.app/)
+- [Live Test Harness (Netlify)](https://harness.sp8d.com/)
 - [Monorepo Root](https://github.com/SP8D/sp8d)
 
 ## Development
