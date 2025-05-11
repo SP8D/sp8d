@@ -30,12 +30,13 @@ if (serveDist) {
     res.sendFile(path.join(__dirname, "index.html"));
   });
   app.use(express.static(__dirname));
-  // Map /core/* to ../core/dist/*
-  app.use("/core", express.static(path.join(__dirname, "../core/dist")));
-  // Map /diagnostics/* to ../diagnostics/dist/*
   app.use(
     "/diagnostics",
     express.static(path.join(__dirname, "../diagnostics/dist"))
+  );
+  app.use(
+    "/sp8d-core.js",
+    express.static(path.join(__dirname, "../core/dist/sp8d-core.js"))
   );
   console.log("[harness] Serving development version from source files");
 }

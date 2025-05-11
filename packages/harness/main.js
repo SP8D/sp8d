@@ -1,5 +1,5 @@
 import { registerAllScenarios } from "./scenarios/index.js";
-import { createChannel } from "./sp8d-core.js";
+import { createChannel } from "/sp8d-core.js";
 // Shared state for scenarios
 const diagSummary = {};
 const diagTestActive = { value: false };
