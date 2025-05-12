@@ -3,6 +3,15 @@ import { testCases } from "./testcases.js";
 
 // Utility to run a test case by scrolling to it, clicking its button, and waiting for PASS or FAIL
 async function runAndCheck(page, testId, resultSelector) {
+  // Listen for page errors and console errors for better debugging
+  page.on("pageerror", (err) => {
+    console.error("\x1b[31m[Playwright][pageerror]", err, "\x1b[0m");
+  });
+  page.on("console", (msg) => {
+    if (msg.type() === "error") {
+      console.error("\x1b[31m[Playwright][console.error]", msg.text(), "\x1b[0m");
+    }
+  });
   // Scroll to the test using hash navigation
   await page.evaluate((id) => {
     window.location.hash = "#" + id;

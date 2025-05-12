@@ -8,13 +8,11 @@
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.3",
-    "concurrently": "^8.2.2",
     "esbuild": "^0.25.3",
     "express": "^5.1.0",
     "husky": "^9.0.0",
     "lint-staged": "^15.2.0",
-    "typescript": "^5.8.3",
-    "wait-on": "^7.2.0"
+    "typescript": "^5.8.3"
   },
   "scripts": {
     "prepare": "husky install",
@@ -27,7 +25,7 @@
     "harness:preview": "npm run preview -w @sp8d/harness",
     "harness:test:e2e": "playwright test",
     "e2e": "npm run harness:test:e2e",
-    "e2e:dist": "npm run build && concurrently -k -s first \"npm run harness:preview\" \"wait-on http://localhost:8080 && npm run harness:test:e2e\""
+    "e2e:dist": "npm run build && playwright test --config=playwright.dist.config.ts"
   },
   "lint-staged": {
     "packages/{core,diagnostics,harness}/**/*": [
