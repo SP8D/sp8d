@@ -1,7 +1,7 @@
 {
   "name": "@sp8d/core",
   "version": "0.2.2",
-  "description": "Ultra-low-latency bounded channel for web-based AI copilots.",
+  "description": "sp8d-core: Ultra-low latency, low-overhead concurrency primitives for TypeScript/JavaScript. Actor model, channels, async, cross-thread, and web worker support.",
   "main": "dist/sp8d-core.js",
   "types": "dist/sp8d-core.d.ts",
   "type": "module",
@@ -15,5 +15,30 @@
   "author": "",
   "license": "MIT",
   "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {},
+  "keywords": [
+    "sp8d",
+    "sp8d-core",
+    "ultra-low latency",
+    "low-overhead",
+    "concurrency",
+    "actor model",
+    "channels",
+    "async",
+    "asynchronous",
+    "cross-thread",
+    "web workers",
+    "worker threads",
+    "multi-threading",
+    "thread pool",
+    "bounded protocol",
+    "message passing",
+    "thread safety",
+    "parallelism",
+    "event-driven",
+    "state machines",
+    "distributed systems",
+    "typescript",
+    "javascript"
+  ]
 }
