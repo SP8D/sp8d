@@ -43,7 +43,7 @@
     <nav class="navbar-exec" aria-label="Main Navigation">
       <div class="navbar-exec-inner navbar-exec-center">
         <a
-          class="navbar-link navbar-link-docs"
+          class="navbar-link"
           href="https://sp8d.github.io"
           target="_blank"
           rel="noopener"
@@ -51,7 +51,7 @@
           >Docs</a
         >
         <a
-          class="navbar-link navbar-link-github"
+          class="navbar-link"
           href="https://github.com/SP8D/sp8d"
           target="_blank"
           rel="noopener"
@@ -59,12 +59,12 @@
           >GitHub</a
         >
         <a
-          class="navbar-link navbar-link-npm"
-          href="https://www.npmjs.com/package/@sp8d/core"
+          class="navbar-link"
+          href="mailto:admin@sp8d.com"
           target="_blank"
           rel="noopener"
-          aria-label="SP8D npm Package"
-          >npm</a
+          aria-label="Contact SP8D Admin"
+          >Contact</a
         >
       </div>
     </nav>
@@ -115,23 +115,20 @@
       >
     </div>
     <main>
-      <section class="carousel-section">
-        <h2 class="section-heading">Protocol Test Scenarios</h2>
+      <section class="carousel-section" aria-labelledby="carousel-heading">
+        <h2 class="section-heading" id="carousel-heading">
+          Protocol Test Scenarios
+        </h2>
         <div class="section-desc">
           Interactive, real-world browser concurrency and protocol validation.
         </div>
         <div class="carousel-container">
-          <div
-            class="carousel-overlay carousel-overlay-left"
-            aria-hidden="true"
-          ></div>
           <button
             class="carousel-chevron-btn carousel-chevron-left"
-            tabindex="0"
-            role="button"
-            aria-label="Previous Test"
             id="carousel-prev"
             type="button"
+            aria-label="Previous Test Scenario"
+            aria-controls="carousel-track"
           >
             <svg
               width="28"
@@ -144,18 +141,21 @@
               <path d="M18 6L10 14L18 22" />
             </svg>
           </button>
-          <div class="carousel-track" id="carousel-track" tabindex="0"></div>
           <div
-            class="carousel-overlay carousel-overlay-right"
-            aria-hidden="true"
-          ></div>
+            class="carousel-track"
+            id="carousel-track"
+            role="listbox"
+            aria-label="Test Scenarios"
+            tabindex="0"
+          >
+            <!-- Test cards will be dynamically inserted here by main.js -->
+          </div>
           <button
             class="carousel-chevron-btn carousel-chevron-right"
-            tabindex="0"
-            role="button"
-            aria-label="Next Test"
             id="carousel-next"
             type="button"
+            aria-label="Next Test Scenario"
+            aria-controls="carousel-track"
           >
             <svg
               width="28"
@@ -184,9 +184,16 @@
     </main>
     <footer>
       <span class="footer-note">
-        <a href="https://sp8d.github.io" target="_blank" rel="noopener">Docs</a>
+        <a
+          class="header-link"
+          href="https://sp8d.github.io"
+          target="_blank"
+          rel="noopener"
+          >Docs</a
+        >
         &nbsp;|&nbsp;
         <a
+          class="header-link"
           href="https://github.com/SP8D/sp8d/tree/main/packages/harness/index.html"
           target="_blank"
           rel="noopener"
@@ -194,10 +201,11 @@
         >
         &nbsp;|&nbsp;
         <a
-          href="https://www.npmjs.com/package/@sp8d/core"
+          class="header-link"
+          href="mailto:admin@sp8d.com"
           target="_blank"
           rel="noopener"
-          >npm</a
+          >Contact</a
         >
         <br />
         <span class="footer-copyright">

@@ -204,6 +204,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const div = document.createElement("div");
     div.className = "testcase";
     div.id = id;
+    div.setAttribute("role", "option");
+    div.setAttribute("aria-selected", "false");
+    div.setAttribute("tabindex", "-1"); // Not individually tabbable, track is.
+
     div.innerHTML = `
       <div class="testcase-header">
         <h2>${title}</h2>
@@ -249,45 +253,57 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Render test cases into the carousel-track
   const carouselTrack = document.getElementById("carousel-track");
-  carouselTrack.innerHTML = "";
+  carouselTrack.innerHTML = ""; // Clear existing before render
   testCases.forEach((tc) => carouselTrack.appendChild(createTestCase(tc)));
 
-  // === Carousel Logic: Clean-Slate Implementation ===
-  (function setupCarousel() {
-    const carouselContainer = document.querySelector(".carousel-container");
-    const carouselTrack = document.getElementById("carousel-track");
-    const prevBtn = document.getElementById("carousel-prev");
-    let testCards = Array.from(carouselTrack.querySelectorAll(".testcase"));
-    let currentIdx = 0;
-    let resizeTimeout;
+  // === Carousel Logic: New Clean-Slate Implementation ===
 
-    // --- Sizing: Use only CSS for card sizing ---
-    function setCardCSSWidths() {
-      testCards = Array.from(carouselTrack.querySelectorAll(".testcase"));
-      testCards.forEach((card) => {
-        card.style.flex = "0 0 100%";
-        card.style.width = "100%";
-        card.style.maxWidth = "100%";
-        card.style.minWidth = "100%";
-        card.style.boxSizing = "border-box";
-      });
-      carouselTrack.style.scrollBehavior = "auto";
-      // Only scroll to the first card if there is no hash in the URL
-      if (!window.location.hash) {
-        scrollToCard(currentIdx, false);
-      }
-      setTimeout(() => {
-        carouselTrack.style.scrollBehavior = "smooth";
-      }, 10);
+  const prevButtonEl = document.getElementById("carousel-prev");
+  const nextButtonEl = document.getElementById("carousel-next");
+  const cardElements = Array.from(carouselTrack.querySelectorAll(".testcase"));
+  let activeCardIndex = 0;
+  let hashUpdateDebounceTimer;
+  let scrollDebounceTimer;
+
+  function getCardPlaceholderOutput(cardId) {
+    switch (cardId) {
+      case "live-high-throughput-stress":
+        return "Duration: - ms\nLost: -";
+      case "slot-reclamation-stale-job-handling":
+        return "Reclaimed: -, Errors: - Free slots after: -";
+      case "race-condition-conflict-resolution":
+        return "Produced: -, Consumed: -, Conflicts: -, Errors: -";
+      case "protocol-correctness-data-integrity":
+        return "Sent: -, Received: -";
+      case "slot-generation-cycle-tag-wraparound":
+        return "Cycles: -, Errors: -, Final Gen: -, Protocol Error: -";
+      case "dos-flood-resilience":
+        return "Duration: - ms\nTimeouts: -";
+      default:
+        return "-";
     }
+  }
 
-    // --- Scroll to a card by index using scrollIntoView ---
-    function scrollToCard(idx, smooth = true, updateHash = true) {
-      abortCurrentTest(); // Abort any running test on card switch
-      // Preserve dashboard layout with placeholders
-      const diagGlobal = document.getElementById("diag-global");
-      if (diagGlobal) {
-        diagGlobal.innerHTML = `
+  function resetCardResults(cardElement) {
+    if (!cardElement) return;
+    const metricEl = cardElement.querySelector(".metric");
+    const outputEl = cardElement.querySelector(".live-output");
+    const runBtn = cardElement.querySelector(".runbtn");
+
+    if (metricEl) {
+      metricEl.textContent = "Not run";
+      metricEl.classList.remove("success", "fail");
+    }
+    if (outputEl) {
+      outputEl.textContent = getCardPlaceholderOutput(cardElement.id);
+    }
+    if (runBtn) {
+      runBtn.disabled = false; // Re-enable run button
+    }
+    // Also reset global diagnostics display
+    const diagGlobal = document.getElementById("diag-global");
+    if (diagGlobal) {
+      diagGlobal.innerHTML = `
           <span class="metric">Peak Throughput: - msg/s</span>
           <span class="metric">Avg Throughput: - msg/s</span>
           <span class="metric">Max Lag: - ms</span>
@@ -296,93 +312,196 @@ document.addEventListener("DOMContentLoaded", () => {
           <span class="metric">Total Reclaimed: -</span>
           <span class="metric">Slots: -</span>
         `;
+    }
+  }
+
+  function updateChevronStates() {
+    prevButtonEl.disabled = activeCardIndex === 0;
+    nextButtonEl.disabled = activeCardIndex === cardElements.length - 1;
+  }
+
+  function debouncedUpdateUrlHash(cardId) {
+    clearTimeout(hashUpdateDebounceTimer);
+    hashUpdateDebounceTimer = setTimeout(() => {
+      // Only update if the card is still the active one,
+      // to prevent race conditions with rapid interactions.
+      if (
+        cardElements[activeCardIndex] &&
+        cardElements[activeCardIndex].id === cardId
+      ) {
+        history.replaceState(null, "", `#${cardId}`);
       }
-      // Also reset all metricbars and live-outputs to placeholders for all test cases
-      testCards = Array.from(carouselTrack.querySelectorAll(".testcase"));
-      testCards.forEach(function (card) {
-        const metric = card.querySelector(".metric");
-        if (metric) {
-          metric.textContent = "Not run";
+    }, 250); // Debounce time for hash update
+  }
+
+  function setActiveCard(newIndex, options = {}) {
+    const {
+      updateHash = true,
+      smoothScroll = true,
+      focusTrack = false,
+      isScrollEvent = false, // Indicates if triggered by scroll/swipe
+    } = options;
+
+    if (newIndex < 0 || newIndex >= cardElements.length) {
+      return; // Index out of bounds
+    }
+
+    // If not a scroll event and index is same, do nothing unless forced (e.g. initial load)
+    if (!isScrollEvent && newIndex === activeCardIndex && !options.force) {
+      return;
+    }
+
+    abortCurrentTest(); // Abort any test running on the outgoing card
+
+    // Update ARIA attributes for the outgoing card
+    if (cardElements[activeCardIndex]) {
+      cardElements[activeCardIndex].setAttribute("aria-selected", "false");
+    }
+
+    const oldIndex = activeCardIndex;
+    activeCardIndex = newIndex;
+    const newActiveCard = cardElements[activeCardIndex];
+
+    if (!newActiveCard) return;
+
+    newActiveCard.setAttribute("aria-selected", "true");
+
+    // Reset results for the NEWLY active card
+    // This should happen BEFORE scrolling into view if possible, or ensure it looks clean.
+    resetCardResults(newActiveCard);
+
+    // Scroll into view
+    // Only programmatically scroll if not triggered by a user scroll event that already positioned the card
+    if (!isScrollEvent) {
+      newActiveCard.scrollIntoView({
+        behavior: smoothScroll ? "smooth" : "auto",
+        block: "nearest", // Ensures the whole card is visible
+        inline: "center", // Aligns to the center of the scroll container
+      });
+    }
+
+    if (updateHash) {
+      debouncedUpdateUrlHash(newActiveCard.id);
+    }
+
+    updateChevronStates();
+
+    if (focusTrack) {
+      carouselTrack.focus({ preventScroll: true }); // preventScroll if already handled
+    }
+  }
+
+  function handleKeyDown(event) {
+    let newIndex = activeCardIndex;
+    let shouldPreventDefault = true;
+
+    switch (event.key) {
+      case "ArrowLeft":
+        newIndex = activeCardIndex - 1;
+        break;
+      case "ArrowRight":
+        newIndex = activeCardIndex + 1;
+        break;
+      case "Home":
+        newIndex = 0;
+        break;
+      case "End":
+        newIndex = cardElements.length - 1;
+        break;
+      default:
+        shouldPreventDefault = false; // Don't prevent default for other keys
+    }
+
+    if (shouldPreventDefault) {
+      event.preventDefault();
+      if (newIndex !== activeCardIndex) {
+        // Avoid re-setting if already at boundary
+        setActiveCard(newIndex, {
+          smoothScroll: true,
+          focusTrack: true,
+          updateHash: true,
+        });
+      }
+    }
+  }
+
+  function handleScroll() {
+    clearTimeout(scrollDebounceTimer);
+    scrollDebounceTimer = setTimeout(() => {
+      if (!cardElements.length) return;
+
+      const trackRect = carouselTrack.getBoundingClientRect();
+      const trackCenter = trackRect.left + trackRect.width / 2;
+
+      let closestCardIndex = -1;
+      let minDistance = Infinity;
+
+      cardElements.forEach((card, index) => {
+        const cardRect = card.getBoundingClientRect();
+        // Calculate the distance from the center of the card to the center of the track
+        const cardCenter = cardRect.left + cardRect.width / 2;
+        const distance = Math.abs(trackCenter - cardCenter);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestCardIndex = index;
         }
-        const liveOutput = card.querySelector(".live-output");
-        if (liveOutput) {
-          // Set scenario-specific output placeholder
-          switch (card.id) {
-            case "live-high-throughput-stress":
-              liveOutput.textContent = "Duration: - ms\nLost: -";
-              break;
-            case "slot-reclamation-stale-job-handling":
-              liveOutput.textContent =
-                "Reclaimed: -, Errors: - Free slots after: -";
-              break;
-            case "race-condition-conflict-resolution":
-              liveOutput.textContent =
-                "Produced: -, Consumed: -, Conflicts: -, Errors: -";
-              break;
-            case "protocol-correctness-data-integrity":
-              liveOutput.textContent = "Sent: -, Received: -";
-              break;
-            case "slot-generation-cycle-tag-wraparound":
-              liveOutput.textContent =
-                "Cycles: -, Errors: -, Final Gen: -, Protocol Error: -";
-              break;
-            case "dos-flood-resilience":
-              liveOutput.textContent = "Duration: - ms\nTimeouts: -";
-              break;
-            default:
-              liveOutput.textContent = "-";
+      });
+
+      // Check if the closest card is sufficiently "snapped" (e.g., within a certain tolerance of the center)
+      // This helps avoid premature updates while scrolling fast.
+      // A simple check: if the closest card's center is within, say, 1/4 of its width from the track center.
+      if (closestCardIndex !== -1 && cardElements[closestCardIndex]) {
+        const cardWidth = cardElements[closestCardIndex].offsetWidth;
+        if (minDistance < cardWidth / 4) {
+          // Tolerance for snapping
+          if (closestCardIndex !== activeCardIndex) {
+            setActiveCard(closestCardIndex, {
+              updateHash: true,
+              smoothScroll: false, // Scroll already happened
+              isScrollEvent: true,
+              focusTrack: false,
+            });
           }
         }
-      });
-      if (!testCards.length) return;
-      currentIdx = (idx + testCards.length) % testCards.length;
-      const card = testCards[currentIdx];
-      if (!card) return;
-      card.scrollIntoView({
-        behavior: smooth ? "smooth" : "auto",
-        block: "nearest",
-        inline: "start",
-      });
-      if (updateHash) {
-        // Update URL hash without scrolling
-        history.replaceState(null, "", `#${card.id}`);
       }
-    }
+    }, 150); // Debounce scroll handler
+  }
 
-    // --- Arrow Button Handlers ---
-    function showPrevCard() {
-      scrollToCard(currentIdx - 1);
+  // Initial Setup
+  if (cardElements.length > 0) {
+    const hashId = window.location.hash.substring(1);
+    let initialIndex = 0;
+    if (hashId) {
+      const foundIndex = testCases.findIndex((tc) => tc.id === hashId);
+      if (foundIndex !== -1) {
+        initialIndex = foundIndex;
+      }
     }
-    function showNextCard() {
-      scrollToCard(currentIdx + 1);
-    }
+    // Force initial card setup, even if index is 0
+    setActiveCard(initialIndex, {
+      updateHash: false,
+      smoothScroll: false,
+      force: true,
+    });
+  } else {
+    updateChevronStates(); // Handle empty carousel case
+  }
 
-    // --- Initial Setup ---
-    setCardCSSWidths();
-    window.addEventListener("resize", () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(setCardCSSWidths, 100);
-    });
-    prevBtn.addEventListener("click", showPrevCard);
-    document
-      .getElementById("carousel-next")
-      .addEventListener("click", showNextCard);
-    carouselTrack.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      if (e.deltaY < 0) {
-        showPrevCard();
-      } else {
-        showNextCard();
-      }
-    });
-    // Initial scroll to the correct card based on URL hash
-    const hash = window.location.hash.substring(1);
-    if (hash) {
-      const idx = testCases.findIndex((tc) => tc.id === hash);
-      if (idx !== -1) {
-        currentIdx = idx;
-        scrollToCard(currentIdx, false);
-      }
-    }
-  })();
+  prevButtonEl.addEventListener("click", () =>
+    setActiveCard(activeCardIndex - 1, {
+      updateHash: true,
+      smoothScroll: true,
+      focusTrack: false,
+    })
+  );
+  nextButtonEl.addEventListener("click", () =>
+    setActiveCard(activeCardIndex + 1, {
+      updateHash: true,
+      smoothScroll: true,
+      focusTrack: false,
+    })
+  );
+  carouselTrack.addEventListener("keydown", handleKeyDown);
+  carouselTrack.addEventListener("scroll", handleScroll, { passive: true });
 });
