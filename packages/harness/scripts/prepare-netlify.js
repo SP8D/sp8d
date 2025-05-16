@@ -54,8 +54,12 @@ async function prerender() {
     await waitForServer(`http://localhost:${PORT}/`);
     const browser = await chromium.launch();
     const page = await browser.newPage();
+    // Log browser console and errors for Netlify CI debugging
+    page.on("console", (msg) => console.log("[browser]", msg.text()));
+    page.on("pageerror", (err) => console.log("[browser error]", err));
     await page.goto(`http://localhost:${PORT}/`);
-    await page.waitForSelector(".carousel-track");
+    // Wait for at least one test card to appear (robust selector)
+    await page.waitForSelector(".carousel-track .testcase", { timeout: 30000 });
     await page.waitForTimeout(500); // Shorter wait for perf
     const html = await page.evaluate(() => document.documentElement.outerHTML);
     fs.writeFileSync(indexDest, html);
