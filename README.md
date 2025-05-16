@@ -55,9 +55,6 @@
 | harness:test:e2e:dist    | Build and run Playwright e2e tests (dist)      |
 | build                    | Build all packages                             |
 | test                     | Run all tests for all packages                 |
-| ci:playwright-install    | Install Playwright browsers (CI/Netlify)       |
-| ci:harness:test:e2e:dist | CI: Install browsers, build, run e2e (dist)    |
-| netlify:build            | Netlify entry: full CI build/test/e2e          |
 
 > For local development in a specific package, see that package's README for its own scripts.
 
@@ -95,7 +92,7 @@ playwright.config.ts # E2E/browser test config
 ## FAQ
 
 **Q: Playwright install fails on Netlify?**  
-A: See the “ci:playwright-install” script and the [harness README](./packages/harness/README.md#faq).
+A: See the Netlify build pipeline section above and the [harness README](./packages/harness/README.md#faq).
 
 **Q: How do I contribute?**  
 A: See [CONTRIBUTING.md](./CONTRIBUTING.md) or open an issue on GitHub.
@@ -112,3 +109,51 @@ A: See [CONTRIBUTING.md](./CONTRIBUTING.md) or open an issue on GitHub.
 ## License
 
 MIT
+
+# SP8D Protocol Test Harness: Playwright E2E & Netlify CI Setup
+
+## E2E Browser Coverage
+
+- **Local:** Chromium, Firefox, WebKit, Edge
+- **Netlify CI:** Chromium, Firefox, Edge (WebKit skipped due to system dependency issues)
+
+## Netlify CI Build Pipeline
+
+1. **Skip Playwright browser downloads**: Set in `netlify.toml`:
+   ```toml
+   [build.environment]
+   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
+   ```
+2. **Install Edge and system dependencies**: Handled in [`.netlify/build.sh`](.netlify/build.sh)
+3. **Install Playwright system dependencies**: `npx playwright install-deps` (run in the build script)
+4. **Build and test**: `npm run build` then `npx playwright test --config=playwright.dist.config.ts` (run in the build script)
+
+## Netlify Build Script
+
+All Netlify CI setup steps are automated in [`/.netlify/build.sh`](.netlify/build.sh). You do not need to run these manually—Netlify will execute this script as part of the build process. For details, see the script itself.
+
+## playwright.dist.config.ts
+
+- In CI: runs Chromium, Firefox, Edge (no WebKit)
+- Locally: runs all browsers
+- Edge is run via the system-installed `msedge` channel
+
+## Local Developer Experience
+
+- `npx playwright install` is run on `postinstall` for local devs (see `package.json`)
+- All browsers are available locally
+
+## Troubleshooting
+
+- **WebKit on CI:** Skipped due to system dependency issues on Netlify Ubuntu images. If Netlify updates their build image, you may re-enable WebKit in CI.
+- **Edge on CI:** If Edge install fails, check Microsoft repo status and APT logs.
+- **Playwright browser errors:** Ensure `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` is set in CI, and that you do not run `npx playwright install` in CI.
+
+## Maintenance
+
+- If you want to re-enable WebKit in CI, add it to the `projects` array in `playwright.dist.config.ts` for CI.
+- Keep `.netlify/build.sh` up to date with any new browser/system requirements.
+
+---
+
+For more, see the canonical documentation at https://sp8d.com/docs

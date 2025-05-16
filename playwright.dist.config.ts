@@ -1,13 +1,22 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Detect CI (Netlify or other)
 const isCI = !!process.env.CI || !!process.env.NETLIFY;
 
+/**
+ * Playwright config:
+ * - In CI: Chromium, Firefox, Edge (no WebKit)
+ * - Locally: Chromium, Firefox, WebKit, Edge
+ *
+ * Edge is run via the system-installed msedge channel (see .netlify/build.sh)
+ * WebKit is skipped in CI due to system dependency issues on Netlify
+ */
 export default defineConfig({
   testDir: "./packages/harness",
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  forbidOnly: isCI,
+  retries: isCI ? 2 : 0,
+  workers: isCI ? 1 : undefined,
   reporter: "html",
   use: {
     trace: "on-first-retry",
@@ -16,6 +25,10 @@ export default defineConfig({
     ? [
         { name: "chromium", use: { ...devices["Desktop Chrome"] } },
         { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+        {
+          name: "Microsoft Edge",
+          use: { ...devices["Desktop Edge"], channel: "msedge" },
+        },
       ]
     : [
         { name: "chromium", use: { ...devices["Desktop Chrome"] } },

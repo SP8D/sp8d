@@ -1,0 +1,6 @@
+[build]
+command = "bash .netlify/build.sh"
+publish = "packages/harness/dist"  # Output directory for static site
+
+[build.environment]
+PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"

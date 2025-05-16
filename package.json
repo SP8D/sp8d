@@ -77,9 +77,7 @@
     "harness:dev": "npm run dev -w @sp8d/harness",
     "harness:preview": "npm run preview -w @sp8d/harness",
     "harness:test:e2e": "playwright test",
-    "harness:test:e2e:dist": "npm run build && playwright test --config=playwright.dist.config.ts",
-    "ci:harness:test:e2e:dist": "npm run harness:test:e2e:dist",
-    "netlify:build": "npm run ci:harness:test:e2e:dist"
+    "harness:test:e2e:dist": "npm run build && playwright test --config=playwright.dist.config.ts"
   },
   "lint-staged": {
     "packages/{core,diagnostics,harness}/**/*": [
