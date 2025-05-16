@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const isCI = !!process.env.CI || !!process.env.NETLIFY;
+
 export default defineConfig({
   testDir: "./packages/harness",
   fullyParallel: true,
@@ -10,15 +12,20 @@ export default defineConfig({
   use: {
     trace: "on-first-retry",
   },
-  projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
-    {
-      name: "Microsoft Edge",
-      use: { ...devices["Desktop Edge"], channel: "msedge" },
-    },
-  ],
+  projects: isCI
+    ? [
+        { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+        { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+      ]
+    : [
+        { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+        { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+        { name: "webkit", use: { ...devices["Desktop Safari"] } },
+        {
+          name: "Microsoft Edge",
+          use: { ...devices["Desktop Edge"], channel: "msedge" },
+        },
+      ],
   webServer: {
     command: "npm run preview -w @sp8d/harness",
     url: "http://127.0.0.1:8080",
