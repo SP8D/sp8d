@@ -5,11 +5,8 @@ const isCI = !!process.env.CI || !!process.env.NETLIFY;
 
 /**
  * Playwright config:
- * - In CI: Chromium, Firefox, Edge (no WebKit)
+ * - In CI: Chromium, Firefox (Edge/WebKit skipped due to Netlify limitations)
  * - Locally: Chromium, Firefox, WebKit, Edge
- *
- * Edge is run via the system-installed msedge channel (see .netlify/build.sh)
- * WebKit is skipped in CI due to system dependency issues on Netlify
  */
 export default defineConfig({
   testDir: "./packages/harness",
@@ -25,10 +22,6 @@ export default defineConfig({
     ? [
         { name: "chromium", use: { ...devices["Desktop Chrome"] } },
         { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-        {
-          name: "Microsoft Edge",
-          use: { ...devices["Desktop Edge"], channel: "msedge" },
-        },
       ]
     : [
         { name: "chromium", use: { ...devices["Desktop Chrome"] } },
