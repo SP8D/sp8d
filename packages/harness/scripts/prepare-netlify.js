@@ -146,8 +146,8 @@ function copyAssetsAndBundles() {
 
 (async () => {
   try {
-    await prerender();
     copyAssetsAndBundles();
+    await prerender();
   } catch (err) {
     console.error("[prepare-netlify] ERROR:", err);
     process.exit(1);
