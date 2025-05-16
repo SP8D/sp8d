@@ -65,6 +65,7 @@
   },
   "scripts": {
     "prepare": "husky install",
+    "postinstall": "npx playwright install --with-deps",
     "build": "npm run core:build && npm run diagnostics:build && npm run harness:build",
     "test": "npm run test -w @sp8d/core && npm run test -w @sp8d/diagnostics && npm run test -w @sp8d/harness",
     "core:build": "npm run build -w @sp8d/core",
