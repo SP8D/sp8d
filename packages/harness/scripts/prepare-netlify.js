@@ -25,6 +25,19 @@ function copyDirRecursive(src, dest) {
   }
 }
 
+function copyDirContents(src, dest) {
+  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src)) {
+    const srcPath = path.join(src, entry);
+    const destPath = path.join(dest, entry);
+    if (fs.statSync(srcPath).isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
 // Start the local server in dist mode
 function startServer() {
   return spawn("node", [path.join(harnessDir, "serve.js")], {
@@ -75,7 +88,9 @@ async function prerender() {
     page.on("console", (msg) => console.log("[browser]", msg.text()));
     page.on("pageerror", (err) => console.log("[browser error]", err));
     page.on("requestfailed", (req) => {
-      console.log(`[browser request failed] ${req.url()} - ${req.failure()?.errorText}`);
+      console.log(
+        `[browser request failed] ${req.url()} - ${req.failure()?.errorText}`
+      );
     });
     page.on("response", (resp) => {
       if (resp.status() === 404) {
@@ -96,12 +111,12 @@ async function prerender() {
 }
 
 function copyAssetsAndBundles() {
-  // Copy assets
+  // Copy assets (contents only)
   const assetsSrc = path.join(harnessDir, "assets");
   const assetsDest = path.join(publishDir, "assets");
   if (fs.existsSync(assetsDest))
     fs.rmSync(assetsDest, { recursive: true, force: true });
-  copyDirRecursive(assetsSrc, assetsDest);
+  copyDirContents(assetsSrc, assetsDest);
   // Copy styles
   fs.copyFileSync(
     path.join(harnessDir, "styles.css"),
@@ -116,11 +131,12 @@ function copyAssetsAndBundles() {
     path.join(harnessDir, "sp8d-diagnostics-worker.js"),
     path.join(publishDir, "sp8d-diagnostics-worker.js")
   );
-  // Copy scenarios
-  copyDirRecursive(
-    path.join(harnessDir, "scenarios"),
-    path.join(publishDir, "scenarios")
-  );
+  // Copy scenarios (contents only)
+  const scenariosSrc = path.join(harnessDir, "scenarios");
+  const scenariosDest = path.join(publishDir, "scenarios");
+  if (fs.existsSync(scenariosDest))
+    fs.rmSync(scenariosDest, { recursive: true, force: true });
+  copyDirContents(scenariosSrc, scenariosDest);
   // Copy extra JS
   const extraFiles = ["testcases.js"];
   for (const file of extraFiles) {
