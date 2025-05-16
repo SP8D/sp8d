@@ -40,6 +40,29 @@ function cleanAndCopyDirContents(src, dest) {
   }
 }
 
+function cleanAndCopyDirContentsFlat(src, dest) {
+  if (fs.existsSync(dest)) fs.rmSync(dest, { recursive: true, force: true });
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src)) {
+    const srcPath = path.join(src, entry);
+    const destPath = path.join(dest, entry);
+    if (fs.statSync(srcPath).isDirectory()) {
+      // Instead of copying the whole subdir, copy its contents flatly
+      for (const subEntry of fs.readdirSync(srcPath)) {
+        const subSrcPath = path.join(srcPath, subEntry);
+        const subDestPath = path.join(dest, subEntry);
+        if (fs.statSync(subSrcPath).isDirectory()) {
+          copyDirRecursive(subSrcPath, subDestPath);
+        } else {
+          fs.copyFileSync(subSrcPath, subDestPath);
+        }
+      }
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
 // Start the local server in dist mode
 function startServer() {
   return spawn("node", [path.join(harnessDir, "serve.js")], {
@@ -113,8 +136,8 @@ async function prerender() {
 }
 
 function copyAssetsAndBundles() {
-  // Clean and copy assets (contents only)
-  cleanAndCopyDirContents(
+  // Clean and copy assets (contents only, flat)
+  cleanAndCopyDirContentsFlat(
     path.join(harnessDir, "assets"),
     path.join(publishDir, "assets")
   );
@@ -132,8 +155,8 @@ function copyAssetsAndBundles() {
     path.join(harnessDir, "sp8d-diagnostics-worker.js"),
     path.join(publishDir, "sp8d-diagnostics-worker.js")
   );
-  // Clean and copy scenarios (contents only)
-  cleanAndCopyDirContents(
+  // Clean and copy scenarios (contents only, flat)
+  cleanAndCopyDirContentsFlat(
     path.join(harnessDir, "scenarios"),
     path.join(publishDir, "scenarios")
   );
