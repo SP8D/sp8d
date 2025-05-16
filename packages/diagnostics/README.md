@@ -2,48 +2,64 @@
 
 Live diagnostics and protocol correctness tracking for [@sp8d/core](../core) channels.
 
-[Monorepo Root](https://github.com/SP8D/sp8d) | [@sp8d/core](../core)
+---
 
-## Why Use @sp8d/diagnostics?
+## What is @sp8d/diagnostics?
 
-- **Live throughput, lag, and slot state**
-- **Protocol correctness and slot reclamation tracking**
-- **TypeScript-first, ESM output**
+- Live throughput, lag, and slot state
+- Protocol correctness and slot reclamation tracking
+- TypeScript-first, ESM output
 
-## Quick Start
+---
 
-```js
-import { createChannel } from "@sp8d/core";
-import { createChannelDiagnostics } from "@sp8d/diagnostics";
-const { channel } = createChannel({ slots: 32, slotSize: 64 });
-const diagnostics = createChannelDiagnostics(channel, 50);
-diagnostics.onUpdate((stats) => {
-  console.log("update:", stats);
-});
-diagnostics.start();
-```
+## Local Development (from this package)
 
-### Browser Usage
+Use these scripts for local development only (from this directory):
 
-- Use the ESM bundle (`sp8d-diagnostics.js`) and types in the harness static build.
-- Import with a relative path in browser harness:
-  ```js
-  import { createChannelDiagnostics } from "./sp8d-diagnostics.js";
-  ```
-- Always run `npm run build` from the monorepo root before deploying or serving the static harness build.
-
-## Live Dashboard & E2E Harness
-
-- The live diagnostics dashboard and e2e test harness are in [@sp8d/harness](../harness).
-- To run locally:
+- **Build:**
   ```sh
-  npm run harness:dev
-  # Open http://localhost:8080/
-  ```
-- To run e2e tests:
-  ```sh
-  npm run e2e
-  # or: npm run harness:test:e2e
+  npm run build
   ```
 
-[Full documentation](https://sp8d.github.io/)
+> For full builds, tests, and E2E/CI, use the monorepo root scripts below.
+
+---
+
+## Monorepo Build & Test (from the root)
+
+- **Build only diagnostics:**
+  ```sh
+  npm run diagnostics:build
+  # (from the monorepo root)
+  ```
+- **Test only diagnostics:**
+  ```sh
+  npm run diagnostics:test
+  # (from the monorepo root)
+  ```
+- **Build all packages:**
+  ```sh
+  npm run build
+  # (from the monorepo root)
+  ```
+- **Test all packages:**
+  ```sh
+  npm run test
+  # (from the monorepo root)
+  ```
+
+See the [root README](../../README.md) for more details and the latest script names.
+
+---
+
+## Documentation
+
+For API, advanced usage, and guides, see the [SP8D Documentation Site](https://sp8d.github.io/).
+
+---
+
+## See Also
+
+- [@sp8d/core](../core): Core protocol implementation
+- [@sp8d/harness](../harness): E2E test harness and diagnostics dashboard
+- [Full documentation](https://sp8d.github.io/)
