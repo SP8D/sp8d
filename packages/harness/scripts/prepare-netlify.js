@@ -48,7 +48,24 @@ async function waitForServer(url, timeout = 15000) {
   throw new Error("Server did not start in time");
 }
 
+function logDistContents() {
+  console.log("[prepare-netlify] dist/ contents:");
+  function walk(dir, prefix = "") {
+    for (const entry of fs.readdirSync(dir)) {
+      const full = path.join(dir, entry);
+      const rel = path.relative(publishDir, full);
+      if (fs.statSync(full).isDirectory()) {
+        walk(full, prefix + rel + "/");
+      } else {
+        console.log("  ", prefix + rel);
+      }
+    }
+  }
+  walk(publishDir);
+}
+
 async function prerender() {
+  logDistContents();
   const server = startServer();
   try {
     await waitForServer(`http://localhost:${PORT}/`);
@@ -57,6 +74,14 @@ async function prerender() {
     // Log browser console and errors for Netlify CI debugging
     page.on("console", (msg) => console.log("[browser]", msg.text()));
     page.on("pageerror", (err) => console.log("[browser error]", err));
+    page.on("requestfailed", (req) => {
+      console.log(`[browser request failed] ${req.url()} - ${req.failure()?.errorText}`);
+    });
+    page.on("response", (resp) => {
+      if (resp.status() === 404) {
+        console.log(`[browser 404] ${resp.url()}`);
+      }
+    });
     await page.goto(`http://localhost:${PORT}/`);
     // Wait for at least one test card to appear (robust selector)
     await page.waitForSelector(".carousel-track .testcase", { timeout: 30000 });
