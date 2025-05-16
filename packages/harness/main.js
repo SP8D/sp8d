@@ -210,7 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     div.innerHTML = `
       <div class="testcase-header">
-        <h2>${title}</h2>
+        <h3>${title}</h3>
         <button class="runbtn">▶ Run</button>
       </div>
       <div class="test-desc">
