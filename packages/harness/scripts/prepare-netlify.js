@@ -11,7 +11,7 @@ const harnessDir = path.join(__dirname, ".."),
 const indexDest = path.join(publishDir, "index.html");
 const PORT = 8080;
 
-// Utility: Recursively copy a directory
+// Utility: Recursively copy a directory (used for subdirs only)
 function copyDirRecursive(src, dest) {
   if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src)) {
@@ -25,8 +25,10 @@ function copyDirRecursive(src, dest) {
   }
 }
 
-function copyDirContents(src, dest) {
-  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+// Clean and copy the contents of a directory (not the dir itself)
+function cleanAndCopyDirContents(src, dest) {
+  if (fs.existsSync(dest)) fs.rmSync(dest, { recursive: true, force: true });
+  fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src)) {
     const srcPath = path.join(src, entry);
     const destPath = path.join(dest, entry);
@@ -100,7 +102,7 @@ async function prerender() {
     await page.goto(`http://localhost:${PORT}/`);
     // Wait for at least one test card to appear (robust selector)
     await page.waitForSelector(".carousel-track .testcase", { timeout: 30000 });
-    await page.waitForTimeout(500); // Shorter wait for perf
+    await page.waitForTimeout(250); // Shorter wait for perf
     const html = await page.evaluate(() => document.documentElement.outerHTML);
     fs.writeFileSync(indexDest, html);
     await browser.close();
@@ -111,12 +113,11 @@ async function prerender() {
 }
 
 function copyAssetsAndBundles() {
-  // Copy assets (contents only)
-  const assetsSrc = path.join(harnessDir, "assets");
-  const assetsDest = path.join(publishDir, "assets");
-  if (fs.existsSync(assetsDest))
-    fs.rmSync(assetsDest, { recursive: true, force: true });
-  copyDirContents(assetsSrc, assetsDest);
+  // Clean and copy assets (contents only)
+  cleanAndCopyDirContents(
+    path.join(harnessDir, "assets"),
+    path.join(publishDir, "assets")
+  );
   // Copy styles
   fs.copyFileSync(
     path.join(harnessDir, "styles.css"),
@@ -131,12 +132,11 @@ function copyAssetsAndBundles() {
     path.join(harnessDir, "sp8d-diagnostics-worker.js"),
     path.join(publishDir, "sp8d-diagnostics-worker.js")
   );
-  // Copy scenarios (contents only)
-  const scenariosSrc = path.join(harnessDir, "scenarios");
-  const scenariosDest = path.join(publishDir, "scenarios");
-  if (fs.existsSync(scenariosDest))
-    fs.rmSync(scenariosDest, { recursive: true, force: true });
-  copyDirContents(scenariosSrc, scenariosDest);
+  // Clean and copy scenarios (contents only)
+  cleanAndCopyDirContents(
+    path.join(harnessDir, "scenarios"),
+    path.join(publishDir, "scenarios")
+  );
   // Copy extra JS
   const extraFiles = ["testcases.js"];
   for (const file of extraFiles) {
