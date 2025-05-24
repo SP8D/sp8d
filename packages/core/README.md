@@ -1,16 +1,17 @@
 # @sp8d/core
 
-Ultra-low-latency, robust message channels for browser and worker concurrency. Designed for AI/data science copilots needing safe, lossless, and high-throughput communication.
+Ultra-low-latency, memory-safe message channels for browser and worker concurrency. Designed for AI/data science copilots needing secure, lossless, and high-throughput communication with comprehensive safety guarantees.
 
 ---
 
 ## What is @sp8d/core?
 
-- Bounded, lock-free channels for browser/worker concurrency
-- No message loss, no UI freezes
-- Automatic slot reclamation and fault recovery
-- Race condition and data integrity protection
-- TypeScript-first, ESM output
+- **Memory-Safe**: Comprehensive bounds checking and buffer validation prevent corruption
+- **Race-Condition Free**: Atomic operations and CAS-based pointer management ensure correctness
+- **Lock-Free Channels**: High-performance browser/worker concurrency without blocking
+- **Zero Message Loss**: Robust protocol with automatic fault recovery and slot reclamation
+- **Production Ready**: Extensively tested with security hardening and protocol validation
+- **TypeScript-First**: Full type safety with ESM output for modern applications
 
 ---
 

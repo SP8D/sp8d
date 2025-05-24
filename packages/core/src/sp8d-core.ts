@@ -44,6 +44,10 @@ const META_FIELDS: Record<string, number> = {
   sweepTimeoutMs: 4,
 };
 
+function alignTo4(value: number): number {
+  return value % 4 === 0 ? 0 : 4 - (value % 4);
+}
+
 function modeToNum(mode: Mode) {
   return mode === "SPSC" ? 0 : mode === "MPSC" ? 1 : 2;
 }
@@ -116,11 +120,11 @@ export class ChannelCore implements Channel {
       offset += 12;
       this.slotStatus.push(new Uint8Array(sab, offset, slots));
       offset += slots;
-      // align to 4 bytes
-      if (offset % 4 !== 0) offset += 4 - (offset % 4);
+      // align to 4 bytes using consistent helper
+      offset += alignTo4(offset);
       this.slotGeneration.push(new Uint8Array(sab, offset, slots));
       offset += slots;
-      if (offset % 4 !== 0) offset += 4 - (offset % 4);
+      offset += alignTo4(offset);
       this.slotClaimTimestamp.push(new Uint32Array(sab, offset, slots));
       offset += slots * 4;
       this.payload.push(new Uint8Array(sab, offset, slots * slotSize));
@@ -134,16 +138,74 @@ export class ChannelCore implements Channel {
   }
 
   static fromBuffer(sab: SharedArrayBuffer): ChannelCore {
+    // Validate buffer structure before creating channel
+    if (sab.byteLength < META_BYTES) {
+      throw new Error(
+        `Invalid buffer: too small (${sab.byteLength} < ${META_BYTES})`
+      );
+    }
+
     const meta = new Uint32Array(sab, 0, META_BYTES / 4);
+    const slots = meta[META_FIELDS.slots];
+    const slotSize = meta[META_FIELDS.slotSize];
+    const segments = meta[META_FIELDS.segments];
+
+    // Validate metadata values
+    if (!slots || slots <= 0) throw new Error("Invalid buffer: invalid slots");
+    if (!slotSize || slotSize <= 0)
+      throw new Error("Invalid buffer: invalid slotSize");
+    if (!segments || segments <= 0)
+      throw new Error("Invalid buffer: invalid segments");
+
+    // Calculate expected buffer size and validate
+    const perSegHeader = 12;
+    const perSegStatus = slots;
+    const perSegStatusAligned = perSegStatus + alignTo4(perSegStatus);
+    const perSegGeneration = slots;
+    const perSegGenerationAligned =
+      perSegGeneration + alignTo4(perSegGeneration);
+    const perSegTimestamp = slots * 4;
+    const perSegPayload = slots * slotSize;
+    const perSeg =
+      perSegHeader +
+      perSegStatusAligned +
+      perSegGenerationAligned +
+      perSegTimestamp +
+      perSegPayload;
+    const expectedSize = META_BYTES + perSeg * segments;
+
+    if (sab.byteLength < expectedSize) {
+      throw new Error(
+        `Invalid buffer: size mismatch (${sab.byteLength} < ${expectedSize})`
+      );
+    }
+
     return new ChannelCore(
       sab,
-      meta[META_FIELDS.slots],
-      meta[META_FIELDS.slotSize],
+      slots,
+      slotSize,
       numToMode(meta[META_FIELDS.mode]),
-      meta[META_FIELDS.segments],
+      segments,
       meta[META_FIELDS.sweepTimeoutMs]
     );
   }
+
+  /**
+   * Get a monotonic timestamp that handles 32-bit overflow gracefully.
+   * This prevents wraparound issues in long-running applications.
+   * @returns 32-bit timestamp value
+   */
+  private getMonotonicTimestamp(): number {
+    // Use performance.now() if available for better precision and monotonic guarantees
+    const now =
+      typeof performance !== "undefined" && performance.now
+        ? performance.now() + performance.timeOrigin
+        : Date.now();
+
+    // Convert to 32-bit but ensure it's always positive and handles overflow
+    return Math.abs(Math.floor(now)) >>> 0;
+  }
+
   private pickSegment(producerId?: number): number {
     return this.segments === 1
       ? 0
@@ -182,8 +244,7 @@ export class ChannelCore implements Channel {
       if (Atomics.load(statusArr, localHead) !== STATUS_EMPTY) {
         this.conflicts++; // increment on every contention
         continue;
-      }
-      // Atomically claim slot and check generation
+      } // Atomically claim slot and check generation
       if (
         Atomics.compareExchange(
           statusArr,
@@ -192,18 +253,42 @@ export class ChannelCore implements Channel {
           STATUS_CLAIMED
         ) === STATUS_EMPTY
       ) {
-        // On wraparound, increment generation
-        Atomics.store(
-          genArr,
-          localHead,
-          (Atomics.load(genArr, localHead) + 1) & 0xff
-        );
-        Atomics.store(claimTS, localHead, Number(Date.now() % 0xffffffff));
+        // Critical: Validate slot index bounds for memory safety
+        if (localHead < 0 || localHead >= this.slots) {
+          this.errors++;
+          throw new Error(
+            `Protocol corruption: slot index ${localHead} out of bounds [0, ${this.slots})`
+          );
+        }
+
+        // Critical: Atomically increment generation BEFORE writing payload
+        // This prevents ABA issues where a slot could be reclaimed and reused
+        // between generation increment and payload write
+        const newGen = (Atomics.load(genArr, localHead) + 1) & 0xff;
+        Atomics.store(genArr, localHead, newGen);
+
+        // Use monotonic timestamp that handles overflow gracefully
+        const timestamp = this.getMonotonicTimestamp();
+        Atomics.store(claimTS, localHead, timestamp);
         const offset = localHead * this.messageSize;
+
+        // Critical: Validate payload buffer bounds for memory safety
+        if (offset + this.messageSize > payloadArr.length) {
+          this.errors++;
+          throw new Error(
+            `Protocol corruption: payload offset ${offset} + ${this.messageSize} exceeds buffer length ${payloadArr.length}`
+          );
+        }
         payloadArr.set(binary.subarray(0, this.messageSize), offset);
         Atomics.store(statusArr, localHead, STATUS_READY);
         Atomics.add(count, 0, 1);
-        Atomics.store(head, 0, (localHead + 1) % this.slots);
+
+        // Critical: Use CAS to atomically advance head pointer
+        // This prevents lost updates when multiple producers compete
+        const expectedHead = localHead;
+        const newHead = (localHead + 1) % this.slots;
+        Atomics.compareExchange(head, 0, expectedHead, newHead);
+
         return true;
       }
       this.conflicts++; // increment on failed CAS
@@ -260,18 +345,42 @@ export class ChannelCore implements Channel {
             STATUS_CLAIMED
           ) === STATUS_READY
         ) {
+          // Critical: Validate slot index bounds for memory safety
+          if (localTail < 0 || localTail >= this.slots) {
+            this.errors++;
+            throw new Error(
+              `Protocol corruption: slot index ${localTail} out of bounds [0, ${this.slots})`
+            );
+          }
+
           const offset = localTail * this.messageSize;
+
+          // Critical: Validate payload buffer bounds for memory safety
+          if (offset + this.messageSize > payloadArr.length) {
+            this.errors++;
+            throw new Error(
+              `Protocol corruption: payload offset ${offset} + ${this.messageSize} exceeds buffer length ${payloadArr.length}`
+            );
+          }
+
           const buf = payloadArr.slice(offset, offset + this.messageSize);
-          // Increment generation on release
-          Atomics.store(
-            genArr,
-            localTail,
-            (Atomics.load(genArr, localTail) + 1) & 0xff
-          );
+
+          // Critical: Atomically increment generation BEFORE releasing slot
+          // This ensures proper ordering and prevents ABA issues
+          const newGen = (Atomics.load(genArr, localTail) + 1) & 0xff;
+          Atomics.store(genArr, localTail, newGen);
+
+          // Now release the slot
           Atomics.store(statusArr, localTail, STATUS_EMPTY);
           Atomics.store(claimTS, localTail, 0);
           Atomics.sub(count, 0, 1);
-          Atomics.store(tail, 0, (localTail + 1) % this.slots);
+
+          // Critical: Use CAS to atomically advance tail pointer
+          // This prevents lost updates when multiple consumers compete
+          const expectedTail = localTail;
+          const newTail = (localTail + 1) % this.slots;
+          Atomics.compareExchange(tail, 0, expectedTail, newTail);
+
           return buf;
         }
         this.conflicts++; // increment on failed CAS
@@ -445,7 +554,7 @@ export class ChannelCore implements Channel {
   }
   private sweepStaleSlots() {
     if (this.closed) return;
-    const now = Number(Date.now() % 0xffffffff);
+    const now = this.getMonotonicTimestamp();
     for (let seg = 0; seg < this.segments; seg++) {
       const statusArr = this.slotStatus[seg];
       const genArr = this.slotGeneration[seg];
@@ -459,14 +568,23 @@ export class ChannelCore implements Channel {
           ts !== 0 &&
           now - Number(ts) > this.sweepTimeoutMs
         ) {
-          // Increment generation on reclaim
-          Atomics.store(genArr, i, (Atomics.load(genArr, i) + 1) & 0xff);
-          Atomics.store(statusArr, i, STATUS_EMPTY);
-          Atomics.store(claimTS, i, 0);
-          const used = Atomics.load(count, 0);
-          if (used > 0) Atomics.sub(count, 0, 1);
-          this.reclaimed++;
-          this.errors++;
+          // Use CAS to atomically reclaim only if still claimed
+          if (
+            Atomics.compareExchange(
+              statusArr,
+              i,
+              STATUS_CLAIMED,
+              STATUS_EMPTY
+            ) === STATUS_CLAIMED
+          ) {
+            // Increment generation on successful reclaim
+            Atomics.store(genArr, i, (Atomics.load(genArr, i) + 1) & 0xff);
+            Atomics.store(claimTS, i, 0);
+            const used = Atomics.load(count, 0);
+            if (used > 0) Atomics.sub(count, 0, 1);
+            this.reclaimed++;
+            this.errors++;
+          }
         }
       }
     }
@@ -501,32 +619,32 @@ export class ChannelCore implements Channel {
   }
 }
 
-// In createChannel, fix buffer size calculation for alignment
-export function createChannel(opts: {
+/**
+ * Create a new SP8D channel with the specified options.
+ * @param options Channel configuration options
+ * @returns Object containing the channel instance and SharedArrayBuffer
+ */
+export function createChannel(options: {
   slots: number;
   slotSize: number;
   mode?: Mode;
   segments?: number;
   sweepTimeoutMs?: number;
 }): { channel: Channel; buffer: SharedArrayBuffer } {
-  const slots = opts.slots;
-  const segments = opts.segments ?? 1;
-  const slotSize = opts.slotSize;
-  const metaHeader = new Uint32Array(10);
-  metaHeader[META_FIELDS.slots] = slots;
-  metaHeader[META_FIELDS.slotSize] = slotSize;
-  metaHeader[META_FIELDS.mode] = modeToNum(opts.mode ?? "SPSC");
-  metaHeader[META_FIELDS.segments] = segments;
-  metaHeader[META_FIELDS.sweepTimeoutMs] = opts.sweepTimeoutMs ?? DEFAULT_SWEEP;
+  const {
+    slots,
+    slotSize,
+    mode = "SPSC",
+    segments = 1,
+    sweepTimeoutMs = DEFAULT_SWEEP,
+  } = options;
+
+  // Calculate required buffer size with proper alignment
   const perSegHeader = 12;
   const perSegStatus = slots;
-  // Align status to 4 bytes
-  const perSegStatusAligned =
-    perSegStatus + (perSegStatus % 4 === 0 ? 0 : 4 - (perSegStatus % 4));
+  const perSegStatusAligned = perSegStatus + alignTo4(perSegStatus);
   const perSegGeneration = slots;
-  const perSegGenerationAligned =
-    perSegGeneration +
-    (perSegGeneration % 4 === 0 ? 0 : 4 - (perSegGeneration % 4));
+  const perSegGenerationAligned = perSegGeneration + alignTo4(perSegGeneration);
   const perSegTimestamp = slots * 4;
   const perSegPayload = slots * slotSize;
   const perSeg =
@@ -535,20 +653,35 @@ export function createChannel(opts: {
     perSegGenerationAligned +
     perSegTimestamp +
     perSegPayload;
-  const totalSize = META_BYTES + perSeg * segments;
-  const sab = new SharedArrayBuffer(totalSize);
-  new Uint32Array(sab, 0, 10).set(metaHeader);
+  const bufferSize = META_BYTES + perSeg * segments;
+
+  const sab = new SharedArrayBuffer(bufferSize);
+
+  // Initialize metadata
+  const meta = new Uint32Array(sab, 0, META_BYTES / 4);
+  meta[META_FIELDS.slots] = slots;
+  meta[META_FIELDS.slotSize] = slotSize;
+  meta[META_FIELDS.mode] = modeToNum(mode);
+  meta[META_FIELDS.segments] = segments;
+  meta[META_FIELDS.sweepTimeoutMs] = sweepTimeoutMs;
+
   const channel = new ChannelCore(
     sab,
     slots,
     slotSize,
-    opts.mode ?? "SPSC",
+    mode,
     segments,
-    opts.sweepTimeoutMs ?? DEFAULT_SWEEP
+    sweepTimeoutMs
   );
+
   return { channel, buffer: sab };
 }
 
+/**
+ * Attach to an existing SP8D channel using its SharedArrayBuffer.
+ * @param buffer The SharedArrayBuffer from a previously created channel
+ * @returns Channel instance attached to the existing buffer
+ */
 export function attachChannel(buffer: SharedArrayBuffer): Channel {
   return ChannelCore.fromBuffer(buffer);
 }

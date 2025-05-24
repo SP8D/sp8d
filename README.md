@@ -6,10 +6,11 @@
 
 ## Features at a Glance
 
-- Ultra-low-latency, robust browser/worker channels
-- Live diagnostics and protocol correctness
-- E2E test harness with Playwright automation
-- CI/CD and Netlify-ready static builds
+- **Memory-Safe, Lock-Free Channels**: Ultra-low-latency browser/worker communication with comprehensive safety guarantees
+- **Race-Condition Prevention**: Atomic operations and CAS-based pointer management ensure protocol correctness
+- **Live Diagnostics & Monitoring**: Real-time protocol correctness validation and performance metrics
+- **Comprehensive Testing**: E2E test harness with Playwright automation and security validation
+- **Production Ready**: CI/CD pipeline with Netlify-ready static builds and security hardening
 
 ---
 

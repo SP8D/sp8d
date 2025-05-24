@@ -1,6 +1,6 @@
 {
   "name": "@sp8d/diagnostics",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "sp8d-diagnostics: Advanced diagnostics, debugging, and observability for concurrent and distributed TypeScript/JavaScript systems. Detect race conditions, deadlocks, and monitor runtime.",
   "main": "dist/sp8d-diagnostics.js",
   "types": "dist/sp8d-diagnostics.d.ts",
@@ -15,7 +15,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@sp8d/core": "0.2.2"
+    "@sp8d/core": "0.3.0"
   },
   "keywords": [
     "sp8d",

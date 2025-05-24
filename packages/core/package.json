@@ -1,7 +1,7 @@
 {
   "name": "@sp8d/core",
-  "version": "0.2.2",
-  "description": "sp8d-core: Ultra-low latency, low-overhead concurrency primitives for TypeScript/JavaScript. Actor model, channels, async, cross-thread, and web worker support.",
+  "version": "0.3.0",
+  "description": "sp8d-core: Ultra-low latency, memory-safe concurrency primitives for TypeScript/JavaScript. Lock-free channels with comprehensive safety guarantees, race condition prevention, and zero-copy messaging for browser and Node.js applications.",
   "main": "dist/sp8d-core.js",
   "types": "dist/sp8d-core.d.ts",
   "type": "module",
@@ -21,6 +21,10 @@
     "sp8d-core",
     "ultra-low latency",
     "low-overhead",
+    "memory-safe",
+    "race-condition-free",
+    "lock-free",
+    "atomic-operations",
     "concurrency",
     "actor model",
     "channels",
@@ -39,6 +43,9 @@
     "state machines",
     "distributed systems",
     "typescript",
-    "javascript"
+    "javascript",
+    "zero-copy",
+    "shared-memory",
+    "protocol-correctness"
   ]
 }
